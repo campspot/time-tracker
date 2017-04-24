@@ -1,0 +1,7 @@
+#app {
+  margin: 30px;
+}
+
+#modal .closed {
+  display: none;
+}

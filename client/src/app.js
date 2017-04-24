@@ -1,16 +1,19 @@
 "use strict";
 
 var $ = require('jquery');
-require('fullcalendar');
+var Marionette = require('backbone.marionette');
+
+var MainView = require('./main/main-view');
+
+var App = Marionette.Application.extend({
+  region: '#app',
+
+  onStart: function () {
+    this.showView(new MainView());
+  }
+});
 
 $(function () {
-  $('#calendar').fullCalendar({
-    header: {
-      left: 'prev,next today',
-      center: 'title',
-      right: 'month,basicWeek,basicDay'
-    },
-    navLinks: true,
-    editable: true
-  });
+  var app = new App();
+  app.start();
 });
