@@ -1,0 +1,13 @@
+server:
+  rootPath: /api
+  applicationConnectors:
+    - type: http
+      port: 6789
+  adminConnectors:
+    - type: http
+      port: 6790
+
+logging:
+  level: INFO
+  loggers:
+    com.campspot: DEBUG

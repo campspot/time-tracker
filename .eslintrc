@@ -1,0 +1,48 @@
+{
+  "plugins": [
+    "mocha"
+  ],
+  "parserOptions": {
+    "ecmaVersion": 5
+  },
+  "globals": {
+    "before": true,
+    "beforeEach": true,
+    "after": true,
+    "afterEach": true,
+    "describe": true,
+    "it": true
+  },
+  "rules": {
+    "camelcase": 2,
+    "consistent-return": 0,
+    "eqeqeq": 2,
+    "guard-for-in": 2,
+    "mocha/no-exclusive-tests": 2,
+    "no-shadow": 0,
+    "no-underscore-dangle": 0,
+    "no-unused-vars": [
+      2,
+      {
+        "args": "none",
+        "vars": "all"
+      }
+    ],
+    "no-use-before-define": [
+      2,
+      "nofunc"
+    ],
+    "no-dupe-keys": 2,
+    "no-dupe-class-members": 2,
+    "quotes": 0,
+    "semi": [
+      2,
+      "always"
+    ],
+    "wrap-iife": 2,
+    "strict": [
+      2,
+      "global"
+    ]
+  }
+}
