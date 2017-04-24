@@ -2,6 +2,12 @@
 
 require('fullcalendar');
 var Marionette = require('backbone.marionette');
+var Radio = require('backbone.radio');
+
+var PUNCHES = require("../events.js").PUNCHES;
+var Punch = require('../models/punch');
+
+var punchChannel = Radio.channel(PUNCHES.channel);
 
 module.exports = Marionette.View.extend({
   template: false,
@@ -13,17 +19,24 @@ module.exports = Marionette.View.extend({
         header: {
           left: 'prev,next today',
           center: 'title',
-          right: 'basicWeek,basicDay,listWeek'
+          right: 'agendaWeek,agendaDay'
         },
-        defaultView: 'basicWeek',
+        defaultView: 'agendaWeek',
         navLinks: true,
         editable: true,
-        eventLimit: true
-        // selectable: true,
-        // selectOverlap: false,
-        // selectHelper: true,
-        // select: this.timeSelector
+        eventLimit: true,
+        nowIndicator: true,
+        slotDuration: '00:15:00',
+        slotLabelInterval: 15,
+        slotLabelFormat: 'h(:mm)a',
+        selectable: true,
+        selectHelper: true,
+        select: self.timeSelected
       });
     });
+  },
+
+  timeSelected: function (start, end) {
+    punchChannel.trigger(PUNCHES.events.NEW_PUNCH, new Punch({start: start, end: end}));
   }
 });

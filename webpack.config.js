@@ -5,6 +5,9 @@ module.exports = {
   output: {
     filename: './src/main/resources/assets/app.js'
   },
+  node: {
+    fs: "empty"
+  },
   module: {
     rules: [{
       test: /\.html$/,

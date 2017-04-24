@@ -63,7 +63,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 121);
+/******/ 	return __webpack_require__(__webpack_require__.s = 123);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -1899,7 +1899,7 @@ function loadLocale(name) {
             module && module.exports) {
         try {
             oldLocale = globalLocale._abbr;
-            __webpack_require__(128)("./" + name);
+            __webpack_require__(132)("./" + name);
             // because defineLocale currently also sets the global locale, we
             // want to undo that for lazy loaded locales
             getSetGlobalLocale(oldLocale);
@@ -4534,7 +4534,7 @@ return hooks;
 
 })));
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(130)(module)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(134)(module)))
 
 /***/ }),
 /* 1 */
@@ -6106,7 +6106,7 @@ var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;//     Underscor
 
 
 (function (global, factory) {
-	 true ? module.exports = factory(__webpack_require__(4), __webpack_require__(1), __webpack_require__(124)) :
+	 true ? module.exports = factory(__webpack_require__(5), __webpack_require__(1), __webpack_require__(4)) :
 	typeof define === 'function' && define.amd ? define(['backbone', 'underscore', 'backbone.radio'], factory) :
 	(global.Marionette = global['Mn'] = factory(global.Backbone,global._,global.Backbone.Radio));
 }(this, (function (Backbone,_,Radio) { 'use strict';
@@ -19849,6 +19849,361 @@ return jQuery;
 /* 4 */
 /***/ (function(module, exports, __webpack_require__) {
 
+// Backbone.Radio v2.0.0
+
+(function (global, factory) {
+   true ? module.exports = factory(__webpack_require__(1), __webpack_require__(5)) :
+  typeof define === 'function' && define.amd ? define(['underscore', 'backbone'], factory) :
+  (global.Backbone = global.Backbone || {}, global.Backbone.Radio = factory(global._,global.Backbone));
+}(this, function (_,Backbone) { 'use strict';
+
+  _ = 'default' in _ ? _['default'] : _;
+  Backbone = 'default' in Backbone ? Backbone['default'] : Backbone;
+
+  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
+    return typeof obj;
+  } : function (obj) {
+    return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj;
+  };
+
+  var previousRadio = Backbone.Radio;
+
+  var Radio = Backbone.Radio = {};
+
+  Radio.VERSION = '2.0.0';
+
+  // This allows you to run multiple instances of Radio on the same
+  // webapp. After loading the new version, call `noConflict()` to
+  // get a reference to it. At the same time the old version will be
+  // returned to Backbone.Radio.
+  Radio.noConflict = function () {
+    Backbone.Radio = previousRadio;
+    return this;
+  };
+
+  // Whether or not we're in DEBUG mode or not. DEBUG mode helps you
+  // get around the issues of lack of warnings when events are mis-typed.
+  Radio.DEBUG = false;
+
+  // Format debug text.
+  Radio._debugText = function (warning, eventName, channelName) {
+    return warning + (channelName ? ' on the ' + channelName + ' channel' : '') + ': "' + eventName + '"';
+  };
+
+  // This is the method that's called when an unregistered event was called.
+  // By default, it logs warning to the console. By overriding this you could
+  // make it throw an Error, for instance. This would make firing a nonexistent event
+  // have the same consequence as firing a nonexistent method on an Object.
+  Radio.debugLog = function (warning, eventName, channelName) {
+    if (Radio.DEBUG && console && console.warn) {
+      console.warn(Radio._debugText(warning, eventName, channelName));
+    }
+  };
+
+  var eventSplitter = /\s+/;
+
+  // An internal method used to handle Radio's method overloading for Requests.
+  // It's borrowed from Backbone.Events. It differs from Backbone's overload
+  // API (which is used in Backbone.Events) in that it doesn't support space-separated
+  // event names.
+  Radio._eventsApi = function (obj, action, name, rest) {
+    if (!name) {
+      return false;
+    }
+
+    var results = {};
+
+    // Handle event maps.
+    if ((typeof name === 'undefined' ? 'undefined' : _typeof(name)) === 'object') {
+      for (var key in name) {
+        var result = obj[action].apply(obj, [key, name[key]].concat(rest));
+        eventSplitter.test(key) ? _.extend(results, result) : results[key] = result;
+      }
+      return results;
+    }
+
+    // Handle space separated event names.
+    if (eventSplitter.test(name)) {
+      var names = name.split(eventSplitter);
+      for (var i = 0, l = names.length; i < l; i++) {
+        results[names[i]] = obj[action].apply(obj, [names[i]].concat(rest));
+      }
+      return results;
+    }
+
+    return false;
+  };
+
+  // An optimized way to execute callbacks.
+  Radio._callHandler = function (callback, context, args) {
+    var a1 = args[0],
+        a2 = args[1],
+        a3 = args[2];
+    switch (args.length) {
+      case 0:
+        return callback.call(context);
+      case 1:
+        return callback.call(context, a1);
+      case 2:
+        return callback.call(context, a1, a2);
+      case 3:
+        return callback.call(context, a1, a2, a3);
+      default:
+        return callback.apply(context, args);
+    }
+  };
+
+  // A helper used by `off` methods to the handler from the store
+  function removeHandler(store, name, callback, context) {
+    var event = store[name];
+    if ((!callback || callback === event.callback || callback === event.callback._callback) && (!context || context === event.context)) {
+      delete store[name];
+      return true;
+    }
+  }
+
+  function removeHandlers(store, name, callback, context) {
+    store || (store = {});
+    var names = name ? [name] : _.keys(store);
+    var matched = false;
+
+    for (var i = 0, length = names.length; i < length; i++) {
+      name = names[i];
+
+      // If there's no event by this name, log it and continue
+      // with the loop
+      if (!store[name]) {
+        continue;
+      }
+
+      if (removeHandler(store, name, callback, context)) {
+        matched = true;
+      }
+    }
+
+    return matched;
+  }
+
+  /*
+   * tune-in
+   * -------
+   * Get console logs of a channel's activity
+   *
+   */
+
+  var _logs = {};
+
+  // This is to produce an identical function in both tuneIn and tuneOut,
+  // so that Backbone.Events unregisters it.
+  function _partial(channelName) {
+    return _logs[channelName] || (_logs[channelName] = _.bind(Radio.log, Radio, channelName));
+  }
+
+  _.extend(Radio, {
+
+    // Log information about the channel and event
+    log: function log(channelName, eventName) {
+      if (typeof console === 'undefined') {
+        return;
+      }
+      var args = _.toArray(arguments).slice(2);
+      console.log('[' + channelName + '] "' + eventName + '"', args);
+    },
+
+    // Logs all events on this channel to the console. It sets an
+    // internal value on the channel telling it we're listening,
+    // then sets a listener on the Backbone.Events
+    tuneIn: function tuneIn(channelName) {
+      var channel = Radio.channel(channelName);
+      channel._tunedIn = true;
+      channel.on('all', _partial(channelName));
+      return this;
+    },
+
+    // Stop logging all of the activities on this channel to the console
+    tuneOut: function tuneOut(channelName) {
+      var channel = Radio.channel(channelName);
+      channel._tunedIn = false;
+      channel.off('all', _partial(channelName));
+      delete _logs[channelName];
+      return this;
+    }
+  });
+
+  /*
+   * Backbone.Radio.Requests
+   * -----------------------
+   * A messaging system for requesting data.
+   *
+   */
+
+  function makeCallback(callback) {
+    return _.isFunction(callback) ? callback : function () {
+      return callback;
+    };
+  }
+
+  Radio.Requests = {
+
+    // Make a request
+    request: function request(name) {
+      var args = _.toArray(arguments).slice(1);
+      var results = Radio._eventsApi(this, 'request', name, args);
+      if (results) {
+        return results;
+      }
+      var channelName = this.channelName;
+      var requests = this._requests;
+
+      // Check if we should log the request, and if so, do it
+      if (channelName && this._tunedIn) {
+        Radio.log.apply(this, [channelName, name].concat(args));
+      }
+
+      // If the request isn't handled, log it in DEBUG mode and exit
+      if (requests && (requests[name] || requests['default'])) {
+        var handler = requests[name] || requests['default'];
+        args = requests[name] ? args : arguments;
+        return Radio._callHandler(handler.callback, handler.context, args);
+      } else {
+        Radio.debugLog('An unhandled request was fired', name, channelName);
+      }
+    },
+
+    // Set up a handler for a request
+    reply: function reply(name, callback, context) {
+      if (Radio._eventsApi(this, 'reply', name, [callback, context])) {
+        return this;
+      }
+
+      this._requests || (this._requests = {});
+
+      if (this._requests[name]) {
+        Radio.debugLog('A request was overwritten', name, this.channelName);
+      }
+
+      this._requests[name] = {
+        callback: makeCallback(callback),
+        context: context || this
+      };
+
+      return this;
+    },
+
+    // Set up a handler that can only be requested once
+    replyOnce: function replyOnce(name, callback, context) {
+      if (Radio._eventsApi(this, 'replyOnce', name, [callback, context])) {
+        return this;
+      }
+
+      var self = this;
+
+      var once = _.once(function () {
+        self.stopReplying(name);
+        return makeCallback(callback).apply(this, arguments);
+      });
+
+      return this.reply(name, once, context);
+    },
+
+    // Remove handler(s)
+    stopReplying: function stopReplying(name, callback, context) {
+      if (Radio._eventsApi(this, 'stopReplying', name)) {
+        return this;
+      }
+
+      // Remove everything if there are no arguments passed
+      if (!name && !callback && !context) {
+        delete this._requests;
+      } else if (!removeHandlers(this._requests, name, callback, context)) {
+        Radio.debugLog('Attempted to remove the unregistered request', name, this.channelName);
+      }
+
+      return this;
+    }
+  };
+
+  /*
+   * Backbone.Radio.channel
+   * ----------------------
+   * Get a reference to a channel by name.
+   *
+   */
+
+  Radio._channels = {};
+
+  Radio.channel = function (channelName) {
+    if (!channelName) {
+      throw new Error('You must provide a name for the channel.');
+    }
+
+    if (Radio._channels[channelName]) {
+      return Radio._channels[channelName];
+    } else {
+      return Radio._channels[channelName] = new Radio.Channel(channelName);
+    }
+  };
+
+  /*
+   * Backbone.Radio.Channel
+   * ----------------------
+   * A Channel is an object that extends from Backbone.Events,
+   * and Radio.Requests.
+   *
+   */
+
+  Radio.Channel = function (channelName) {
+    this.channelName = channelName;
+  };
+
+  _.extend(Radio.Channel.prototype, Backbone.Events, Radio.Requests, {
+
+    // Remove all handlers from the messaging systems of this channel
+    reset: function reset() {
+      this.off();
+      this.stopListening();
+      this.stopReplying();
+      return this;
+    }
+  });
+
+  /*
+   * Top-level API
+   * -------------
+   * Supplies the 'top-level API' for working with Channels directly
+   * from Backbone.Radio.
+   *
+   */
+
+  var channel;
+  var args;
+  var systems = [Backbone.Events, Radio.Requests];
+  _.each(systems, function (system) {
+    _.each(system, function (method, methodName) {
+      Radio[methodName] = function (channelName) {
+        args = _.toArray(arguments).slice(1);
+        channel = this.channel(channelName);
+        return channel[methodName].apply(channel, args);
+      };
+    });
+  });
+
+  Radio.reset = function (channelName) {
+    var channels = !channelName ? this._channels : [this._channels[channelName]];
+    _.each(channels, function (channel) {
+      channel.reset();
+    });
+  };
+
+  return Radio;
+
+}));
+//# sourceMappingURL=./backbone.radio.js.map
+
+/***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
 /* WEBPACK VAR INJECTION */(function(global) {var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;//     Backbone.js 1.3.3
 
 //     (c) 2010-2016 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -21771,10 +22126,27 @@ return jQuery;
   return Backbone;
 });
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(129)))
+/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(133)))
 
 /***/ }),
-/* 5 */
+/* 6 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+module.exports = {
+  PUNCHES: {
+    channel: 'PUNCHES',
+    events: {
+      NEW_PUNCH: 'punch:new'
+    }
+  }
+};
+
+
+/***/ }),
+/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -21852,7 +22224,7 @@ return af;
 
 
 /***/ }),
-/* 6 */
+/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -21916,7 +22288,7 @@ return arDz;
 
 
 /***/ }),
-/* 7 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -21980,7 +22352,7 @@ return arKw;
 
 
 /***/ }),
-/* 8 */
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -22111,7 +22483,7 @@ return arLy;
 
 
 /***/ }),
-/* 9 */
+/* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -22176,7 +22548,7 @@ return arMa;
 
 
 /***/ }),
-/* 10 */
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -22286,7 +22658,7 @@ return arSa;
 
 
 /***/ }),
-/* 11 */
+/* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -22350,7 +22722,7 @@ return arTn;
 
 
 /***/ }),
-/* 12 */
+/* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -22497,7 +22869,7 @@ return ar;
 
 
 /***/ }),
-/* 13 */
+/* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -22607,7 +22979,7 @@ return az;
 
 
 /***/ }),
-/* 14 */
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -22746,7 +23118,7 @@ return be;
 
 
 /***/ }),
-/* 15 */
+/* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -22841,7 +23213,7 @@ return bg;
 
 
 /***/ }),
-/* 16 */
+/* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -22965,7 +23337,7 @@ return bn;
 
 
 /***/ }),
-/* 17 */
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -23089,7 +23461,7 @@ return bo;
 
 
 /***/ }),
-/* 18 */
+/* 20 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -23202,7 +23574,7 @@ return br;
 
 
 /***/ }),
-/* 19 */
+/* 21 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -23350,7 +23722,7 @@ return bs;
 
 
 /***/ }),
-/* 20 */
+/* 22 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -23443,7 +23815,7 @@ return ca;
 
 
 /***/ }),
-/* 21 */
+/* 23 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -23620,7 +23992,7 @@ return cs;
 
 
 /***/ }),
-/* 22 */
+/* 24 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -23688,7 +24060,7 @@ return cv;
 
 
 /***/ }),
-/* 23 */
+/* 25 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -23774,7 +24146,7 @@ return cy;
 
 
 /***/ }),
-/* 24 */
+/* 26 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -23839,7 +24211,7 @@ return da;
 
 
 /***/ }),
-/* 25 */
+/* 27 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -23923,7 +24295,7 @@ return deAt;
 
 
 /***/ }),
-/* 26 */
+/* 28 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -24006,7 +24378,7 @@ return deCh;
 
 
 /***/ }),
-/* 27 */
+/* 29 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -24089,7 +24461,7 @@ return de;
 
 
 /***/ }),
-/* 28 */
+/* 30 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -24194,7 +24566,7 @@ return dv;
 
 
 /***/ }),
-/* 29 */
+/* 31 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -24299,7 +24671,7 @@ return el;
 
 
 /***/ }),
-/* 30 */
+/* 32 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -24371,7 +24743,7 @@ return enAu;
 
 
 /***/ }),
-/* 31 */
+/* 33 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -24439,7 +24811,7 @@ return enCa;
 
 
 /***/ }),
-/* 32 */
+/* 34 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -24511,7 +24883,7 @@ return enGb;
 
 
 /***/ }),
-/* 33 */
+/* 35 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -24583,7 +24955,7 @@ return enIe;
 
 
 /***/ }),
-/* 34 */
+/* 36 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -24655,7 +25027,7 @@ return enNz;
 
 
 /***/ }),
-/* 35 */
+/* 37 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -24733,7 +25105,7 @@ return eo;
 
 
 /***/ }),
-/* 36 */
+/* 38 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -24820,7 +25192,7 @@ return esDo;
 
 
 /***/ }),
-/* 37 */
+/* 39 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -24908,7 +25280,7 @@ return es;
 
 
 /***/ }),
-/* 38 */
+/* 40 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -24993,7 +25365,7 @@ return et;
 
 
 /***/ }),
-/* 39 */
+/* 41 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -25064,7 +25436,7 @@ return eu;
 
 
 /***/ }),
-/* 40 */
+/* 42 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -25176,7 +25548,7 @@ return fa;
 
 
 /***/ }),
-/* 41 */
+/* 43 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -25288,7 +25660,7 @@ return fi;
 
 
 /***/ }),
-/* 42 */
+/* 44 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -25353,7 +25725,7 @@ return fo;
 
 
 /***/ }),
-/* 43 */
+/* 45 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -25432,7 +25804,7 @@ return frCa;
 
 
 /***/ }),
-/* 44 */
+/* 46 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -25515,7 +25887,7 @@ return frCh;
 
 
 /***/ }),
-/* 45 */
+/* 47 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -25603,7 +25975,7 @@ return fr;
 
 
 /***/ }),
-/* 46 */
+/* 48 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -25683,7 +26055,7 @@ return fy;
 
 
 /***/ }),
-/* 47 */
+/* 49 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -25764,7 +26136,7 @@ return gd;
 
 
 /***/ }),
-/* 48 */
+/* 50 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -25846,7 +26218,7 @@ return gl;
 
 
 /***/ }),
-/* 49 */
+/* 51 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -25973,7 +26345,7 @@ return gomLatn;
 
 
 /***/ }),
-/* 50 */
+/* 52 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -26077,7 +26449,7 @@ return he;
 
 
 /***/ }),
-/* 51 */
+/* 53 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -26206,7 +26578,7 @@ return hi;
 
 
 /***/ }),
-/* 52 */
+/* 54 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -26356,7 +26728,7 @@ return hr;
 
 
 /***/ }),
-/* 53 */
+/* 55 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -26470,7 +26842,7 @@ return hu;
 
 
 /***/ }),
-/* 54 */
+/* 56 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -26570,7 +26942,7 @@ return hyAm;
 
 
 /***/ }),
-/* 55 */
+/* 57 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -26658,7 +27030,7 @@ return id;
 
 
 /***/ }),
-/* 56 */
+/* 58 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -26790,7 +27162,7 @@ return is;
 
 
 /***/ }),
-/* 57 */
+/* 59 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -26865,7 +27237,7 @@ return it;
 
 
 /***/ }),
-/* 58 */
+/* 60 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -26950,7 +27322,7 @@ return ja;
 
 
 /***/ }),
-/* 59 */
+/* 61 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -27038,7 +27410,7 @@ return jv;
 
 
 /***/ }),
-/* 60 */
+/* 62 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -27132,7 +27504,7 @@ return ka;
 
 
 /***/ }),
-/* 61 */
+/* 63 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -27224,7 +27596,7 @@ return kk;
 
 
 /***/ }),
-/* 62 */
+/* 64 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -27287,7 +27659,7 @@ return km;
 
 
 /***/ }),
-/* 63 */
+/* 65 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -27418,7 +27790,7 @@ return kn;
 
 
 /***/ }),
-/* 64 */
+/* 66 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -27492,7 +27864,7 @@ return ko;
 
 
 /***/ }),
-/* 65 */
+/* 67 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -27585,7 +27957,7 @@ return ky;
 
 
 /***/ }),
-/* 66 */
+/* 68 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -27727,7 +28099,7 @@ return lb;
 
 
 /***/ }),
-/* 67 */
+/* 69 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -27802,7 +28174,7 @@ return lo;
 
 
 /***/ }),
-/* 68 */
+/* 70 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -27924,7 +28296,7 @@ return lt;
 
 
 /***/ }),
-/* 69 */
+/* 71 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -28026,7 +28398,7 @@ return lv;
 
 
 /***/ }),
-/* 70 */
+/* 72 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -28142,7 +28514,7 @@ return me;
 
 
 /***/ }),
-/* 71 */
+/* 73 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -28211,7 +28583,7 @@ return mi;
 
 
 /***/ }),
-/* 72 */
+/* 74 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -28306,7 +28678,7 @@ return mk;
 
 
 /***/ }),
-/* 73 */
+/* 75 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -28392,7 +28764,7 @@ return ml;
 
 
 /***/ }),
-/* 74 */
+/* 76 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -28556,7 +28928,7 @@ return mr;
 
 
 /***/ }),
-/* 75 */
+/* 77 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -28644,7 +29016,7 @@ return msMy;
 
 
 /***/ }),
-/* 76 */
+/* 78 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -28731,7 +29103,7 @@ return ms;
 
 
 /***/ }),
-/* 77 */
+/* 79 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -28832,7 +29204,7 @@ return my;
 
 
 /***/ }),
-/* 78 */
+/* 80 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -28900,7 +29272,7 @@ return nb;
 
 
 /***/ }),
-/* 79 */
+/* 81 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -29028,7 +29400,7 @@ return ne;
 
 
 /***/ }),
-/* 80 */
+/* 82 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -29121,7 +29493,7 @@ return nlBe;
 
 
 /***/ }),
-/* 81 */
+/* 83 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -29214,7 +29586,7 @@ return nl;
 
 
 /***/ }),
-/* 82 */
+/* 84 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -29279,7 +29651,7 @@ return nn;
 
 
 /***/ }),
-/* 83 */
+/* 85 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -29408,7 +29780,7 @@ return paIn;
 
 
 /***/ }),
-/* 84 */
+/* 86 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -29520,7 +29892,7 @@ return pl;
 
 
 /***/ }),
-/* 85 */
+/* 87 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -29586,7 +29958,7 @@ return ptBr;
 
 
 /***/ }),
-/* 86 */
+/* 88 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -29656,7 +30028,7 @@ return pt;
 
 
 /***/ }),
-/* 87 */
+/* 89 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -29736,7 +30108,7 @@ return ro;
 
 
 /***/ }),
-/* 88 */
+/* 90 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -29924,7 +30296,7 @@ return ru;
 
 
 /***/ }),
-/* 89 */
+/* 91 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -30027,7 +30399,7 @@ return sd;
 
 
 /***/ }),
-/* 90 */
+/* 92 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -30093,7 +30465,7 @@ return se;
 
 
 /***/ }),
-/* 91 */
+/* 93 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -30169,7 +30541,7 @@ return si;
 
 
 /***/ }),
-/* 92 */
+/* 94 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -30324,7 +30696,7 @@ return sk;
 
 
 /***/ }),
-/* 93 */
+/* 95 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -30491,7 +30863,7 @@ return sl;
 
 
 /***/ }),
-/* 94 */
+/* 96 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -30566,7 +30938,7 @@ return sq;
 
 
 /***/ }),
-/* 95 */
+/* 97 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -30681,7 +31053,7 @@ return srCyrl;
 
 
 /***/ }),
-/* 96 */
+/* 98 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -30796,7 +31168,7 @@ return sr;
 
 
 /***/ }),
-/* 97 */
+/* 99 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -30890,7 +31262,7 @@ return ss;
 
 
 /***/ }),
-/* 98 */
+/* 100 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -30964,7 +31336,7 @@ return sv;
 
 
 /***/ }),
-/* 99 */
+/* 101 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -31028,7 +31400,7 @@ return sw;
 
 
 /***/ }),
-/* 100 */
+/* 102 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -31163,7 +31535,7 @@ return ta;
 
 
 /***/ }),
-/* 101 */
+/* 103 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -31257,7 +31629,7 @@ return te;
 
 
 /***/ }),
-/* 102 */
+/* 104 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -31330,7 +31702,7 @@ return tet;
 
 
 /***/ }),
-/* 103 */
+/* 105 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -31402,7 +31774,7 @@ return th;
 
 
 /***/ }),
-/* 104 */
+/* 106 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -31469,7 +31841,7 @@ return tlPh;
 
 
 /***/ }),
-/* 105 */
+/* 107 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -31594,7 +31966,7 @@ return tlh;
 
 
 /***/ }),
-/* 106 */
+/* 108 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -31689,7 +32061,7 @@ return tr;
 
 
 /***/ }),
-/* 107 */
+/* 109 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -31785,7 +32157,7 @@ return tzl;
 
 
 /***/ }),
-/* 108 */
+/* 110 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -31848,7 +32220,7 @@ return tzmLatn;
 
 
 /***/ }),
-/* 109 */
+/* 111 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -31911,7 +32283,7 @@ return tzm;
 
 
 /***/ }),
-/* 110 */
+/* 112 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -32067,7 +32439,7 @@ return uk;
 
 
 /***/ }),
-/* 111 */
+/* 113 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -32171,7 +32543,7 @@ return ur;
 
 
 /***/ }),
-/* 112 */
+/* 114 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -32234,7 +32606,7 @@ return uzLatn;
 
 
 /***/ }),
-/* 113 */
+/* 115 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -32297,7 +32669,7 @@ return uz;
 
 
 /***/ }),
-/* 114 */
+/* 116 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -32381,7 +32753,7 @@ return vi;
 
 
 /***/ }),
-/* 115 */
+/* 117 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -32454,7 +32826,7 @@ return xPseudo;
 
 
 /***/ }),
-/* 116 */
+/* 118 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -32519,7 +32891,7 @@ return yo;
 
 
 /***/ }),
-/* 117 */
+/* 119 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -32635,7 +33007,7 @@ return zhCn;
 
 
 /***/ }),
-/* 118 */
+/* 120 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -32745,7 +33117,7 @@ return zhHk;
 
 
 /***/ }),
-/* 119 */
+/* 121 */
 /***/ (function(module, exports, __webpack_require__) {
 
 //! moment.js locale configuration
@@ -32854,44 +33226,60 @@ return zhTw;
 
 
 /***/ }),
-/* 120 */
+/* 122 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var Marionette = __webpack_require__(2);
-var _ = __webpack_require__(1);
+const Marionette = __webpack_require__(2);
+const Radio = __webpack_require__(4);
+const _ = __webpack_require__(1);
 
-var ModalView = __webpack_require__(123);
-var CalendarView = __webpack_require__(122);
+const PUNCHES = __webpack_require__(6).PUNCHES;
+const ModalView = __webpack_require__(125);
+const CalendarView = __webpack_require__(124);
+const PunchView = __webpack_require__(126);
+
+const punchChannel = Radio.channel(PUNCHES.channel);
 
 module.exports = Marionette.View.extend({
-  template: _.template(__webpack_require__(126)),
+  template: _.template(__webpack_require__(129)),
 
   regions: {
     modal: '#modal',
     calendar: '#calendar'
   },
 
-  onRender: function () {
+  initialize() {
+    this.listenTo(punchChannel, PUNCHES.events.NEW_PUNCH, this.fillInNewPunch);
+  },
+
+  onRender() {
     this.showChildView('modal', new ModalView());
     this.showChildView('calendar', new CalendarView());
+  },
+
+  fillInNewPunch(punch) {
+    console.log(punch.toJSON());
+    const punchView = new PunchView({model: punch});
+    this.getChildView('modal').showInModal("Record Time", punchView, _.bind(punch.save, punch));
   }
 });
 
 
 /***/ }),
-/* 121 */
+/* 123 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
 var $ = __webpack_require__(3);
+var _ = __webpack_require__(1);
 var Marionette = __webpack_require__(2);
 
-var MainView = __webpack_require__(120);
+var MainView = __webpack_require__(122);
 
 var App = Marionette.Application.extend({
   region: '#app',
@@ -32908,14 +33296,20 @@ $(function () {
 
 
 /***/ }),
-/* 122 */
+/* 124 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-__webpack_require__(125);
+__webpack_require__(128);
 var Marionette = __webpack_require__(2);
+var Radio = __webpack_require__(4);
+
+var PUNCHES = __webpack_require__(6).PUNCHES;
+var Punch = __webpack_require__(127);
+
+var punchChannel = Radio.channel(PUNCHES.channel);
 
 module.exports = Marionette.View.extend({
   template: false,
@@ -32927,399 +33321,164 @@ module.exports = Marionette.View.extend({
         header: {
           left: 'prev,next today',
           center: 'title',
-          right: 'basicWeek,basicDay,listWeek'
+          right: 'agendaWeek,agendaDay'
         },
-        defaultView: 'basicWeek',
+        defaultView: 'agendaWeek',
         navLinks: true,
         editable: true,
-        eventLimit: true
-        // selectable: true,
-        // selectHelper: true,
-        // select: this.timeSelector
+        eventLimit: true,
+        nowIndicator: true,
+        slotDuration: '00:15:00',
+        slotLabelInterval: 15,
+        slotLabelFormat: 'h(:mm)a',
+        selectable: true,
+        selectHelper: true,
+        select: self.timeSelected
       });
     });
+  },
+
+  timeSelected: function (start, end) {
+    punchChannel.trigger(PUNCHES.events.NEW_PUNCH, new Punch({start: start, end: end}));
   }
 });
 
 
 /***/ }),
-/* 123 */
+/* 125 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 
-var Marionette = __webpack_require__(2);
-var _ = __webpack_require__(1);
+const Marionette = __webpack_require__(2);
+const _ = __webpack_require__(1);
 
 module.exports = Marionette.View.extend({
-  template: _.template(__webpack_require__(127)),
+  template: _.template(__webpack_require__(130)),
 
   className: 'closed',
 
   regions: {
     content: '#modalContent'
+  },
+
+  events: {
+    'click .save': 'save',
+    'click .close-modal': 'closeModal'
+  },
+
+  serializeData() {
+    return {
+      name: this.name
+    };
+  },
+
+  showInModal(name, view, saveCallback) {
+    this.$el.removeClass('closed');
+    this.name = name;
+    this.saveCallback = saveCallback;
+
+    this.showChildView('content', view);
+  },
+
+  save() {
+    if (this.saveCallback) {
+      this.saveCallback();
+    }
+  },
+
+  closeModal() {
+    delete this.name;
+    delete this.saveCallback;
+    this.$el.addClass('closed');
+    let child = this.getChildView('content');
+    this.detachChildView('content');
+    child.destroy();
   }
 });
 
 
 /***/ }),
-/* 124 */
+/* 126 */
 /***/ (function(module, exports, __webpack_require__) {
 
-// Backbone.Radio v2.0.0
+"use strict";
 
-(function (global, factory) {
-   true ? module.exports = factory(__webpack_require__(1), __webpack_require__(4)) :
-  typeof define === 'function' && define.amd ? define(['underscore', 'backbone'], factory) :
-  (global.Backbone = global.Backbone || {}, global.Backbone.Radio = factory(global._,global.Backbone));
-}(this, function (_,Backbone) { 'use strict';
 
-  _ = 'default' in _ ? _['default'] : _;
-  Backbone = 'default' in Backbone ? Backbone['default'] : Backbone;
+const Marionette = __webpack_require__(2);
+const _ = __webpack_require__(1);
 
-  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
-    return typeof obj;
-  } : function (obj) {
-    return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj;
-  };
+module.exports = Marionette.View.extend({
+  template: _.template(__webpack_require__(131)),
 
-  var previousRadio = Backbone.Radio;
+  className: 'punch-form',
 
-  var Radio = Backbone.Radio = {};
+  events: {
+    'change .app-start': 'updateStart',
+    'change .app-end': 'updateStart',
+    'change .app-category': 'updateCategory',
+    'change .app-description': 'updateDescription',
+  },
 
-  Radio.VERSION = '2.0.0';
+  modelEvents: {
+    'change': 'render'
+  },
 
-  // This allows you to run multiple instances of Radio on the same
-  // webapp. After loading the new version, call `noConflict()` to
-  // get a reference to it. At the same time the old version will be
-  // returned to Backbone.Radio.
-  Radio.noConflict = function () {
-    Backbone.Radio = previousRadio;
-    return this;
-  };
-
-  // Whether or not we're in DEBUG mode or not. DEBUG mode helps you
-  // get around the issues of lack of warnings when events are mis-typed.
-  Radio.DEBUG = false;
-
-  // Format debug text.
-  Radio._debugText = function (warning, eventName, channelName) {
-    return warning + (channelName ? ' on the ' + channelName + ' channel' : '') + ': "' + eventName + '"';
-  };
-
-  // This is the method that's called when an unregistered event was called.
-  // By default, it logs warning to the console. By overriding this you could
-  // make it throw an Error, for instance. This would make firing a nonexistent event
-  // have the same consequence as firing a nonexistent method on an Object.
-  Radio.debugLog = function (warning, eventName, channelName) {
-    if (Radio.DEBUG && console && console.warn) {
-      console.warn(Radio._debugText(warning, eventName, channelName));
-    }
-  };
-
-  var eventSplitter = /\s+/;
-
-  // An internal method used to handle Radio's method overloading for Requests.
-  // It's borrowed from Backbone.Events. It differs from Backbone's overload
-  // API (which is used in Backbone.Events) in that it doesn't support space-separated
-  // event names.
-  Radio._eventsApi = function (obj, action, name, rest) {
-    if (!name) {
-      return false;
-    }
-
-    var results = {};
-
-    // Handle event maps.
-    if ((typeof name === 'undefined' ? 'undefined' : _typeof(name)) === 'object') {
-      for (var key in name) {
-        var result = obj[action].apply(obj, [key, name[key]].concat(rest));
-        eventSplitter.test(key) ? _.extend(results, result) : results[key] = result;
-      }
-      return results;
-    }
-
-    // Handle space separated event names.
-    if (eventSplitter.test(name)) {
-      var names = name.split(eventSplitter);
-      for (var i = 0, l = names.length; i < l; i++) {
-        results[names[i]] = obj[action].apply(obj, [names[i]].concat(rest));
-      }
-      return results;
-    }
-
-    return false;
-  };
-
-  // An optimized way to execute callbacks.
-  Radio._callHandler = function (callback, context, args) {
-    var a1 = args[0],
-        a2 = args[1],
-        a3 = args[2];
-    switch (args.length) {
-      case 0:
-        return callback.call(context);
-      case 1:
-        return callback.call(context, a1);
-      case 2:
-        return callback.call(context, a1, a2);
-      case 3:
-        return callback.call(context, a1, a2, a3);
-      default:
-        return callback.apply(context, args);
-    }
-  };
-
-  // A helper used by `off` methods to the handler from the store
-  function removeHandler(store, name, callback, context) {
-    var event = store[name];
-    if ((!callback || callback === event.callback || callback === event.callback._callback) && (!context || context === event.context)) {
-      delete store[name];
-      return true;
-    }
-  }
-
-  function removeHandlers(store, name, callback, context) {
-    store || (store = {});
-    var names = name ? [name] : _.keys(store);
-    var matched = false;
-
-    for (var i = 0, length = names.length; i < length; i++) {
-      name = names[i];
-
-      // If there's no event by this name, log it and continue
-      // with the loop
-      if (!store[name]) {
-        continue;
-      }
-
-      if (removeHandler(store, name, callback, context)) {
-        matched = true;
-      }
-    }
-
-    return matched;
-  }
-
-  /*
-   * tune-in
-   * -------
-   * Get console logs of a channel's activity
-   *
-   */
-
-  var _logs = {};
-
-  // This is to produce an identical function in both tuneIn and tuneOut,
-  // so that Backbone.Events unregisters it.
-  function _partial(channelName) {
-    return _logs[channelName] || (_logs[channelName] = _.bind(Radio.log, Radio, channelName));
-  }
-
-  _.extend(Radio, {
-
-    // Log information about the channel and event
-    log: function log(channelName, eventName) {
-      if (typeof console === 'undefined') {
-        return;
-      }
-      var args = _.toArray(arguments).slice(2);
-      console.log('[' + channelName + '] "' + eventName + '"', args);
-    },
-
-    // Logs all events on this channel to the console. It sets an
-    // internal value on the channel telling it we're listening,
-    // then sets a listener on the Backbone.Events
-    tuneIn: function tuneIn(channelName) {
-      var channel = Radio.channel(channelName);
-      channel._tunedIn = true;
-      channel.on('all', _partial(channelName));
-      return this;
-    },
-
-    // Stop logging all of the activities on this channel to the console
-    tuneOut: function tuneOut(channelName) {
-      var channel = Radio.channel(channelName);
-      channel._tunedIn = false;
-      channel.off('all', _partial(channelName));
-      delete _logs[channelName];
-      return this;
-    }
-  });
-
-  /*
-   * Backbone.Radio.Requests
-   * -----------------------
-   * A messaging system for requesting data.
-   *
-   */
-
-  function makeCallback(callback) {
-    return _.isFunction(callback) ? callback : function () {
-      return callback;
-    };
-  }
-
-  Radio.Requests = {
-
-    // Make a request
-    request: function request(name) {
-      var args = _.toArray(arguments).slice(1);
-      var results = Radio._eventsApi(this, 'request', name, args);
-      if (results) {
-        return results;
-      }
-      var channelName = this.channelName;
-      var requests = this._requests;
-
-      // Check if we should log the request, and if so, do it
-      if (channelName && this._tunedIn) {
-        Radio.log.apply(this, [channelName, name].concat(args));
-      }
-
-      // If the request isn't handled, log it in DEBUG mode and exit
-      if (requests && (requests[name] || requests['default'])) {
-        var handler = requests[name] || requests['default'];
-        args = requests[name] ? args : arguments;
-        return Radio._callHandler(handler.callback, handler.context, args);
-      } else {
-        Radio.debugLog('An unhandled request was fired', name, channelName);
-      }
-    },
-
-    // Set up a handler for a request
-    reply: function reply(name, callback, context) {
-      if (Radio._eventsApi(this, 'reply', name, [callback, context])) {
-        return this;
-      }
-
-      this._requests || (this._requests = {});
-
-      if (this._requests[name]) {
-        Radio.debugLog('A request was overwritten', name, this.channelName);
-      }
-
-      this._requests[name] = {
-        callback: makeCallback(callback),
-        context: context || this
-      };
-
-      return this;
-    },
-
-    // Set up a handler that can only be requested once
-    replyOnce: function replyOnce(name, callback, context) {
-      if (Radio._eventsApi(this, 'replyOnce', name, [callback, context])) {
-        return this;
-      }
-
-      var self = this;
-
-      var once = _.once(function () {
-        self.stopReplying(name);
-        return makeCallback(callback).apply(this, arguments);
-      });
-
-      return this.reply(name, once, context);
-    },
-
-    // Remove handler(s)
-    stopReplying: function stopReplying(name, callback, context) {
-      if (Radio._eventsApi(this, 'stopReplying', name)) {
-        return this;
-      }
-
-      // Remove everything if there are no arguments passed
-      if (!name && !callback && !context) {
-        delete this._requests;
-      } else if (!removeHandlers(this._requests, name, callback, context)) {
-        Radio.debugLog('Attempted to remove the unregistered request', name, this.channelName);
-      }
-
-      return this;
-    }
-  };
-
-  /*
-   * Backbone.Radio.channel
-   * ----------------------
-   * Get a reference to a channel by name.
-   *
-   */
-
-  Radio._channels = {};
-
-  Radio.channel = function (channelName) {
-    if (!channelName) {
-      throw new Error('You must provide a name for the channel.');
-    }
-
-    if (Radio._channels[channelName]) {
-      return Radio._channels[channelName];
-    } else {
-      return Radio._channels[channelName] = new Radio.Channel(channelName);
-    }
-  };
-
-  /*
-   * Backbone.Radio.Channel
-   * ----------------------
-   * A Channel is an object that extends from Backbone.Events,
-   * and Radio.Requests.
-   *
-   */
-
-  Radio.Channel = function (channelName) {
-    this.channelName = channelName;
-  };
-
-  _.extend(Radio.Channel.prototype, Backbone.Events, Radio.Requests, {
-
-    // Remove all handlers from the messaging systems of this channel
-    reset: function reset() {
-      this.off();
-      this.stopListening();
-      this.stopReplying();
-      return this;
-    }
-  });
-
-  /*
-   * Top-level API
-   * -------------
-   * Supplies the 'top-level API' for working with Channels directly
-   * from Backbone.Radio.
-   *
-   */
-
-  var channel;
-  var args;
-  var systems = [Backbone.Events, Radio.Requests];
-  _.each(systems, function (system) {
-    _.each(system, function (method, methodName) {
-      Radio[methodName] = function (channelName) {
-        args = _.toArray(arguments).slice(1);
-        channel = this.channel(channelName);
-        return channel[methodName].apply(channel, args);
-      };
+  serializeData() {
+    let x = _.extend(this.model.toJSON(), {
+      displayStart: this.model.get('start').format('HH:mm'),
+      displayEnd: this.model.get('end').format('HH:mm')
     });
-  });
 
-  Radio.reset = function (channelName) {
-    var channels = !channelName ? this._channels : [this._channels[channelName]];
-    _.each(channels, function (channel) {
-      channel.reset();
-    });
-  };
+    console.log(x);
 
-  return Radio;
+    return x;
+  },
 
-}));
-//# sourceMappingURL=./backbone.radio.js.map
+  updateStart() {
+    console.log('start', this.$('.app-start').val());
+  },
+
+  updateEnd() {
+    console.log('end', this.$('.app-end').val());
+  },
+
+  updateCategory() {
+    console.log('category', this.$('.app-category').val());
+  },
+
+  updateDescription() {
+    console.log('description', this.$('.app-description').val());
+  },
+
+  onDestroy() {
+    console.warn('boom');
+  }
+});
+
 
 /***/ }),
-/* 125 */
+/* 127 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+var Backbone = __webpack_require__(5);
+
+module.exports = Backbone.Model.extend({
+  defaults: {
+    start: null,
+    end: null,
+    category: '',
+    description: ''
+  }
+});
+
+
+/***/ }),
+/* 128 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
@@ -48618,252 +48777,258 @@ return FC; // export for Node/CommonJS
 });
 
 /***/ }),
-/* 126 */
+/* 129 */
 /***/ (function(module, exports) {
 
 module.exports = "<h1>Campspot Time Tracking</h1>\n<div id=\"modal\"></div>\n<div id=\"calendar\"></div>\n";
 
 /***/ }),
-/* 127 */
+/* 130 */
 /***/ (function(module, exports) {
 
-module.exports = "<div id=\"modalBackdrop\"></div>\n<div id=\"modalHeader\">\n  <div id=\"modalTitle\"></div>\n  <button class=\"close-modal\">X</button>\n</div>\n<div id=\"modalContent\"></div>\n<div id=\"modalFooter\">\n  <button class=\"close-modal\">Cancel</button>\n  <button class=\"save\">Save</button>\n</div>\n";
+module.exports = "<div id=\"modalBackdrop\" class=\"close-modal\"></div>\n<div id=\"modalHeader\">\n  <div id=\"modalTitle\"></div>\n  <button class=\"close-modal\">X</button>\n</div>\n<div id=\"modalContent\"></div>\n<div id=\"modalFooter\">\n  <button class=\"close-modal\">Cancel</button>\n  <button class=\"save\">Save</button>\n</div>\n";
 
 /***/ }),
-/* 128 */
+/* 131 */
+/***/ (function(module, exports) {
+
+module.exports = "<label>Start\n  <input type=\"time\" class=\"app-start\" value=\"<%= displayStart %>\">\n</label>\n\n<label>End\n  <input type=\"time\" class=\"app-end\" value=\"<%= displayEnd %>\">\n</label>\n\n<label>Category\n  <input type=\"text\" class=\"app-category\" value=\"<%= category %>\">\n</label>\n\n<label>Description\n  <textarea class=\"app-description\"><%= description %></textarea>\n</label>\n";
+
+/***/ }),
+/* 132 */
 /***/ (function(module, exports, __webpack_require__) {
 
 var map = {
-	"./af": 5,
-	"./af.js": 5,
-	"./ar": 12,
-	"./ar-dz": 6,
-	"./ar-dz.js": 6,
-	"./ar-kw": 7,
-	"./ar-kw.js": 7,
-	"./ar-ly": 8,
-	"./ar-ly.js": 8,
-	"./ar-ma": 9,
-	"./ar-ma.js": 9,
-	"./ar-sa": 10,
-	"./ar-sa.js": 10,
-	"./ar-tn": 11,
-	"./ar-tn.js": 11,
-	"./ar.js": 12,
-	"./az": 13,
-	"./az.js": 13,
-	"./be": 14,
-	"./be.js": 14,
-	"./bg": 15,
-	"./bg.js": 15,
-	"./bn": 16,
-	"./bn.js": 16,
-	"./bo": 17,
-	"./bo.js": 17,
-	"./br": 18,
-	"./br.js": 18,
-	"./bs": 19,
-	"./bs.js": 19,
-	"./ca": 20,
-	"./ca.js": 20,
-	"./cs": 21,
-	"./cs.js": 21,
-	"./cv": 22,
-	"./cv.js": 22,
-	"./cy": 23,
-	"./cy.js": 23,
-	"./da": 24,
-	"./da.js": 24,
-	"./de": 27,
-	"./de-at": 25,
-	"./de-at.js": 25,
-	"./de-ch": 26,
-	"./de-ch.js": 26,
-	"./de.js": 27,
-	"./dv": 28,
-	"./dv.js": 28,
-	"./el": 29,
-	"./el.js": 29,
-	"./en-au": 30,
-	"./en-au.js": 30,
-	"./en-ca": 31,
-	"./en-ca.js": 31,
-	"./en-gb": 32,
-	"./en-gb.js": 32,
-	"./en-ie": 33,
-	"./en-ie.js": 33,
-	"./en-nz": 34,
-	"./en-nz.js": 34,
-	"./eo": 35,
-	"./eo.js": 35,
-	"./es": 37,
-	"./es-do": 36,
-	"./es-do.js": 36,
-	"./es.js": 37,
-	"./et": 38,
-	"./et.js": 38,
-	"./eu": 39,
-	"./eu.js": 39,
-	"./fa": 40,
-	"./fa.js": 40,
-	"./fi": 41,
-	"./fi.js": 41,
-	"./fo": 42,
-	"./fo.js": 42,
-	"./fr": 45,
-	"./fr-ca": 43,
-	"./fr-ca.js": 43,
-	"./fr-ch": 44,
-	"./fr-ch.js": 44,
-	"./fr.js": 45,
-	"./fy": 46,
-	"./fy.js": 46,
-	"./gd": 47,
-	"./gd.js": 47,
-	"./gl": 48,
-	"./gl.js": 48,
-	"./gom-latn": 49,
-	"./gom-latn.js": 49,
-	"./he": 50,
-	"./he.js": 50,
-	"./hi": 51,
-	"./hi.js": 51,
-	"./hr": 52,
-	"./hr.js": 52,
-	"./hu": 53,
-	"./hu.js": 53,
-	"./hy-am": 54,
-	"./hy-am.js": 54,
-	"./id": 55,
-	"./id.js": 55,
-	"./is": 56,
-	"./is.js": 56,
-	"./it": 57,
-	"./it.js": 57,
-	"./ja": 58,
-	"./ja.js": 58,
-	"./jv": 59,
-	"./jv.js": 59,
-	"./ka": 60,
-	"./ka.js": 60,
-	"./kk": 61,
-	"./kk.js": 61,
-	"./km": 62,
-	"./km.js": 62,
-	"./kn": 63,
-	"./kn.js": 63,
-	"./ko": 64,
-	"./ko.js": 64,
-	"./ky": 65,
-	"./ky.js": 65,
-	"./lb": 66,
-	"./lb.js": 66,
-	"./lo": 67,
-	"./lo.js": 67,
-	"./lt": 68,
-	"./lt.js": 68,
-	"./lv": 69,
-	"./lv.js": 69,
-	"./me": 70,
-	"./me.js": 70,
-	"./mi": 71,
-	"./mi.js": 71,
-	"./mk": 72,
-	"./mk.js": 72,
-	"./ml": 73,
-	"./ml.js": 73,
-	"./mr": 74,
-	"./mr.js": 74,
-	"./ms": 76,
-	"./ms-my": 75,
-	"./ms-my.js": 75,
-	"./ms.js": 76,
-	"./my": 77,
-	"./my.js": 77,
-	"./nb": 78,
-	"./nb.js": 78,
-	"./ne": 79,
-	"./ne.js": 79,
-	"./nl": 81,
-	"./nl-be": 80,
-	"./nl-be.js": 80,
-	"./nl.js": 81,
-	"./nn": 82,
-	"./nn.js": 82,
-	"./pa-in": 83,
-	"./pa-in.js": 83,
-	"./pl": 84,
-	"./pl.js": 84,
-	"./pt": 86,
-	"./pt-br": 85,
-	"./pt-br.js": 85,
-	"./pt.js": 86,
-	"./ro": 87,
-	"./ro.js": 87,
-	"./ru": 88,
-	"./ru.js": 88,
-	"./sd": 89,
-	"./sd.js": 89,
-	"./se": 90,
-	"./se.js": 90,
-	"./si": 91,
-	"./si.js": 91,
-	"./sk": 92,
-	"./sk.js": 92,
-	"./sl": 93,
-	"./sl.js": 93,
-	"./sq": 94,
-	"./sq.js": 94,
-	"./sr": 96,
-	"./sr-cyrl": 95,
-	"./sr-cyrl.js": 95,
-	"./sr.js": 96,
-	"./ss": 97,
-	"./ss.js": 97,
-	"./sv": 98,
-	"./sv.js": 98,
-	"./sw": 99,
-	"./sw.js": 99,
-	"./ta": 100,
-	"./ta.js": 100,
-	"./te": 101,
-	"./te.js": 101,
-	"./tet": 102,
-	"./tet.js": 102,
-	"./th": 103,
-	"./th.js": 103,
-	"./tl-ph": 104,
-	"./tl-ph.js": 104,
-	"./tlh": 105,
-	"./tlh.js": 105,
-	"./tr": 106,
-	"./tr.js": 106,
-	"./tzl": 107,
-	"./tzl.js": 107,
-	"./tzm": 109,
-	"./tzm-latn": 108,
-	"./tzm-latn.js": 108,
-	"./tzm.js": 109,
-	"./uk": 110,
-	"./uk.js": 110,
-	"./ur": 111,
-	"./ur.js": 111,
-	"./uz": 113,
-	"./uz-latn": 112,
-	"./uz-latn.js": 112,
-	"./uz.js": 113,
-	"./vi": 114,
-	"./vi.js": 114,
-	"./x-pseudo": 115,
-	"./x-pseudo.js": 115,
-	"./yo": 116,
-	"./yo.js": 116,
-	"./zh-cn": 117,
-	"./zh-cn.js": 117,
-	"./zh-hk": 118,
-	"./zh-hk.js": 118,
-	"./zh-tw": 119,
-	"./zh-tw.js": 119
+	"./af": 7,
+	"./af.js": 7,
+	"./ar": 14,
+	"./ar-dz": 8,
+	"./ar-dz.js": 8,
+	"./ar-kw": 9,
+	"./ar-kw.js": 9,
+	"./ar-ly": 10,
+	"./ar-ly.js": 10,
+	"./ar-ma": 11,
+	"./ar-ma.js": 11,
+	"./ar-sa": 12,
+	"./ar-sa.js": 12,
+	"./ar-tn": 13,
+	"./ar-tn.js": 13,
+	"./ar.js": 14,
+	"./az": 15,
+	"./az.js": 15,
+	"./be": 16,
+	"./be.js": 16,
+	"./bg": 17,
+	"./bg.js": 17,
+	"./bn": 18,
+	"./bn.js": 18,
+	"./bo": 19,
+	"./bo.js": 19,
+	"./br": 20,
+	"./br.js": 20,
+	"./bs": 21,
+	"./bs.js": 21,
+	"./ca": 22,
+	"./ca.js": 22,
+	"./cs": 23,
+	"./cs.js": 23,
+	"./cv": 24,
+	"./cv.js": 24,
+	"./cy": 25,
+	"./cy.js": 25,
+	"./da": 26,
+	"./da.js": 26,
+	"./de": 29,
+	"./de-at": 27,
+	"./de-at.js": 27,
+	"./de-ch": 28,
+	"./de-ch.js": 28,
+	"./de.js": 29,
+	"./dv": 30,
+	"./dv.js": 30,
+	"./el": 31,
+	"./el.js": 31,
+	"./en-au": 32,
+	"./en-au.js": 32,
+	"./en-ca": 33,
+	"./en-ca.js": 33,
+	"./en-gb": 34,
+	"./en-gb.js": 34,
+	"./en-ie": 35,
+	"./en-ie.js": 35,
+	"./en-nz": 36,
+	"./en-nz.js": 36,
+	"./eo": 37,
+	"./eo.js": 37,
+	"./es": 39,
+	"./es-do": 38,
+	"./es-do.js": 38,
+	"./es.js": 39,
+	"./et": 40,
+	"./et.js": 40,
+	"./eu": 41,
+	"./eu.js": 41,
+	"./fa": 42,
+	"./fa.js": 42,
+	"./fi": 43,
+	"./fi.js": 43,
+	"./fo": 44,
+	"./fo.js": 44,
+	"./fr": 47,
+	"./fr-ca": 45,
+	"./fr-ca.js": 45,
+	"./fr-ch": 46,
+	"./fr-ch.js": 46,
+	"./fr.js": 47,
+	"./fy": 48,
+	"./fy.js": 48,
+	"./gd": 49,
+	"./gd.js": 49,
+	"./gl": 50,
+	"./gl.js": 50,
+	"./gom-latn": 51,
+	"./gom-latn.js": 51,
+	"./he": 52,
+	"./he.js": 52,
+	"./hi": 53,
+	"./hi.js": 53,
+	"./hr": 54,
+	"./hr.js": 54,
+	"./hu": 55,
+	"./hu.js": 55,
+	"./hy-am": 56,
+	"./hy-am.js": 56,
+	"./id": 57,
+	"./id.js": 57,
+	"./is": 58,
+	"./is.js": 58,
+	"./it": 59,
+	"./it.js": 59,
+	"./ja": 60,
+	"./ja.js": 60,
+	"./jv": 61,
+	"./jv.js": 61,
+	"./ka": 62,
+	"./ka.js": 62,
+	"./kk": 63,
+	"./kk.js": 63,
+	"./km": 64,
+	"./km.js": 64,
+	"./kn": 65,
+	"./kn.js": 65,
+	"./ko": 66,
+	"./ko.js": 66,
+	"./ky": 67,
+	"./ky.js": 67,
+	"./lb": 68,
+	"./lb.js": 68,
+	"./lo": 69,
+	"./lo.js": 69,
+	"./lt": 70,
+	"./lt.js": 70,
+	"./lv": 71,
+	"./lv.js": 71,
+	"./me": 72,
+	"./me.js": 72,
+	"./mi": 73,
+	"./mi.js": 73,
+	"./mk": 74,
+	"./mk.js": 74,
+	"./ml": 75,
+	"./ml.js": 75,
+	"./mr": 76,
+	"./mr.js": 76,
+	"./ms": 78,
+	"./ms-my": 77,
+	"./ms-my.js": 77,
+	"./ms.js": 78,
+	"./my": 79,
+	"./my.js": 79,
+	"./nb": 80,
+	"./nb.js": 80,
+	"./ne": 81,
+	"./ne.js": 81,
+	"./nl": 83,
+	"./nl-be": 82,
+	"./nl-be.js": 82,
+	"./nl.js": 83,
+	"./nn": 84,
+	"./nn.js": 84,
+	"./pa-in": 85,
+	"./pa-in.js": 85,
+	"./pl": 86,
+	"./pl.js": 86,
+	"./pt": 88,
+	"./pt-br": 87,
+	"./pt-br.js": 87,
+	"./pt.js": 88,
+	"./ro": 89,
+	"./ro.js": 89,
+	"./ru": 90,
+	"./ru.js": 90,
+	"./sd": 91,
+	"./sd.js": 91,
+	"./se": 92,
+	"./se.js": 92,
+	"./si": 93,
+	"./si.js": 93,
+	"./sk": 94,
+	"./sk.js": 94,
+	"./sl": 95,
+	"./sl.js": 95,
+	"./sq": 96,
+	"./sq.js": 96,
+	"./sr": 98,
+	"./sr-cyrl": 97,
+	"./sr-cyrl.js": 97,
+	"./sr.js": 98,
+	"./ss": 99,
+	"./ss.js": 99,
+	"./sv": 100,
+	"./sv.js": 100,
+	"./sw": 101,
+	"./sw.js": 101,
+	"./ta": 102,
+	"./ta.js": 102,
+	"./te": 103,
+	"./te.js": 103,
+	"./tet": 104,
+	"./tet.js": 104,
+	"./th": 105,
+	"./th.js": 105,
+	"./tl-ph": 106,
+	"./tl-ph.js": 106,
+	"./tlh": 107,
+	"./tlh.js": 107,
+	"./tr": 108,
+	"./tr.js": 108,
+	"./tzl": 109,
+	"./tzl.js": 109,
+	"./tzm": 111,
+	"./tzm-latn": 110,
+	"./tzm-latn.js": 110,
+	"./tzm.js": 111,
+	"./uk": 112,
+	"./uk.js": 112,
+	"./ur": 113,
+	"./ur.js": 113,
+	"./uz": 115,
+	"./uz-latn": 114,
+	"./uz-latn.js": 114,
+	"./uz.js": 115,
+	"./vi": 116,
+	"./vi.js": 116,
+	"./x-pseudo": 117,
+	"./x-pseudo.js": 117,
+	"./yo": 118,
+	"./yo.js": 118,
+	"./zh-cn": 119,
+	"./zh-cn.js": 119,
+	"./zh-hk": 120,
+	"./zh-hk.js": 120,
+	"./zh-tw": 121,
+	"./zh-tw.js": 121
 };
 function webpackContext(req) {
 	return __webpack_require__(webpackContextResolve(req));
@@ -48879,10 +49044,10 @@ webpackContext.keys = function webpackContextKeys() {
 };
 webpackContext.resolve = webpackContextResolve;
 module.exports = webpackContext;
-webpackContext.id = 128;
+webpackContext.id = 132;
 
 /***/ }),
-/* 129 */
+/* 133 */
 /***/ (function(module, exports) {
 
 var g;
@@ -48909,7 +49074,7 @@ module.exports = g;
 
 
 /***/ }),
-/* 130 */
+/* 134 */
 /***/ (function(module, exports) {
 
 module.exports = function(module) {
