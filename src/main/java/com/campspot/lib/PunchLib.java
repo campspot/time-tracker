@@ -14,6 +14,8 @@ public class PunchLib {
   }
 
   public Punch create(Punch punch) {
+    validatePunchDoesNotOverlap(punch);
+
     return PunchMapper.fromModel(punchDAO.create(PunchMapper.fromAPI(punch)));
   }
 
@@ -22,5 +24,11 @@ public class PunchLib {
       .stream()
       .map(PunchMapper::fromModel)
       .collect(ImmutableList.toImmutableList());
+  }
+
+  private void validatePunchDoesNotOverlap(Punch punch) {
+    if (punchDAO.anyInRange(punch.getStart(), punch.getEnd())) {
+      throw new RuntimeException("Punch Cannot Overlap");
+    }
   }
 }

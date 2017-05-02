@@ -4,6 +4,7 @@ import com.campspot.dao.entities.PunchModel;
 import io.dropwizard.hibernate.AbstractDAO;
 import org.hibernate.Criteria;
 import org.hibernate.SessionFactory;
+import org.hibernate.criterion.Projections;
 import org.hibernate.criterion.Restrictions;
 import org.joda.time.DateTime;
 
@@ -26,5 +27,16 @@ public class PunchDAO extends AbstractDAO<PunchModel> {
       .add(Restrictions.le("end", end));
 
     return list(filter);
+  }
+
+  public Boolean anyInRange(DateTime start, DateTime end) {
+    Criteria filter = criteria();
+
+    filter
+      .add(Restrictions.ge("end", start))
+      .add(Restrictions.le("start", end))
+      .setProjection(Projections.count("id"));
+
+    return (long) filter.uniqueResult() > 0;
   }
 }

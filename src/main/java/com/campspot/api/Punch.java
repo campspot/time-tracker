@@ -139,7 +139,7 @@ public class Punch {
 
   @JsonIgnore
   @ValidationMethod(message = "Start must be before end")
-  public Boolean validateStartBeforeEnd() {
+  public Boolean isStartBeforeEnd() {
     return start.isBefore(end);
   }
 }

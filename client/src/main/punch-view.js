@@ -2,6 +2,7 @@
 
 const Marionette = require('backbone.marionette');
 const _ = require('underscore');
+const moment = require('moment-timezone');
 
 module.exports = Marionette.View.extend({
   template: _.template(require('./punch.html')),
@@ -10,7 +11,7 @@ module.exports = Marionette.View.extend({
 
   events: {
     'change .app-start': 'updateStart',
-    'change .app-end': 'updateStart',
+    'change .app-end': 'updateEnd',
     'change .app-category': 'updateCategory',
     'change .app-description': 'updateDescription',
   },
@@ -27,12 +28,18 @@ module.exports = Marionette.View.extend({
   },
 
   updateStart() {
-    let start = this.$('.app-start').val();
+    const startTime = this.$('.app-start').val();
+    const startDate = this.model.get('start').format('YYYY-MM-DD');
+    console.log(startDate, startTime);
+    const start = moment(`${startDate}T${startTime}`);
     this.model.set('start', start);
   },
 
   updateEnd() {
-    let end = this.$('.app-end').val();
+    const endTime = this.$('.app-end').val();
+    const endDate = this.model.get('end').format('YYYY-MM-DD');
+    console.log(endDate, endTime);
+    const end = moment(`${endDate}T${endTime}`);
     this.model.set('end', end);
   },
 

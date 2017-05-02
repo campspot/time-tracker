@@ -18,6 +18,8 @@ module.exports = Marionette.View.extend({
     setTimeout(function () {
       self.$el.fullCalendar({
         events: self.loadEvents.bind(self),
+        timezone: 'local',
+        timeFormat: 'h(:mm) A',
         header: {
           left: 'prev,next today',
           center: 'title',
@@ -28,9 +30,10 @@ module.exports = Marionette.View.extend({
         editable: true,
         eventLimit: true,
         nowIndicator: true,
-        slotDuration: '00:15:00',
-        slotLabelInterval: 15,
-        slotLabelFormat: 'h(:mm)a',
+        allDaySlot: false,
+        slotDuration: {minutes: 15},
+        slotLabelInterval: {minutes: 60},
+        slotLabelFormat: 'h(:mm) A',
         selectable: true,
         selectHelper: true,
         select: self.timeSelected.bind(this),
