@@ -27,7 +27,8 @@ module.exports = Backbone.Model.extend({
       id: this.get('id'),
       start: this.get('start').toISOString(),
       end: this.get('end').toISOString(),
-      title: this.get('description')
+      title: this.get('description'),
+      punch: true
     };
   },
 

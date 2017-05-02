@@ -33,7 +33,8 @@ module.exports = Marionette.View.extend({
         slotLabelFormat: 'h(:mm)a',
         selectable: true,
         selectHelper: true,
-        select: self.timeSelected.bind(this)
+        select: self.timeSelected.bind(this),
+        eventOverlap: self.resolveOverlap.bind(this)
       });
     });
   },
@@ -53,5 +54,9 @@ module.exports = Marionette.View.extend({
 
   timeSelected(start, end) {
     punchChannel.trigger(PUNCHES.events.NEW_PUNCH, new Punch({start: start, end: end}));
+  },
+
+  resolveOverlap(stillEvent, movingEvent) {
+    return !stillEvent.punch;
   }
 });
