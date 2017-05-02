@@ -16,6 +16,8 @@
     "fullcalendar": "^3.3.1",
     "html-loader": "0.4.5",
     "jquery": "latest",
+    "moment": "^2.18.1",
+    "moment-timezone": "^0.5.13",
     "underscore": "^1.8.3",
     "webpack": "^2.4.1"
   }

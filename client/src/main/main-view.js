@@ -5,6 +5,7 @@ const Radio = require('backbone.radio');
 const _ = require('underscore');
 
 const PUNCHES = require("../events.js").PUNCHES;
+const PunchCollection = require('../collections/punch-collection');
 const ModalView = require('./modal-view');
 const CalendarView = require('./calendar-view');
 const PunchView = require('./punch-view');
@@ -21,15 +22,16 @@ module.exports = Marionette.View.extend({
 
   initialize() {
     this.listenTo(punchChannel, PUNCHES.events.NEW_PUNCH, this.fillInNewPunch);
+
+    this.collection = new PunchCollection();
   },
 
   onRender() {
     this.showChildView('modal', new ModalView());
-    this.showChildView('calendar', new CalendarView());
+    this.showChildView('calendar', new CalendarView({collection: this.collection}));
   },
 
   fillInNewPunch(punch) {
-    console.log(punch.toJSON());
     const punchView = new PunchView({model: punch});
     this.getChildView('modal').showInModal("Record Time", punchView, _.bind(punch.save, punch));
   }

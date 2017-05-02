@@ -43,6 +43,8 @@ module.exports = Marionette.View.extend({
     this.$el.addClass('closed');
     let child = this.getChildView('content');
     this.detachChildView('content');
-    child.destroy();
+    if (child) {
+      child.destroy();
+    }
   }
 });

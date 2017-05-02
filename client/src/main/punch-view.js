@@ -20,29 +20,29 @@ module.exports = Marionette.View.extend({
   },
 
   serializeData() {
-    let x = _.extend(this.model.toJSON(), {
+    return _.extend(this.model.toJSON(), {
       displayStart: this.model.get('start').format('HH:mm'),
       displayEnd: this.model.get('end').format('HH:mm')
     });
-
-    console.log(x);
-
-    return x;
   },
 
   updateStart() {
-    console.log('start', this.$('.app-start').val());
+    let start = this.$('.app-start').val();
+    this.model.set('start', start);
   },
 
   updateEnd() {
-    console.log('end', this.$('.app-end').val());
+    let end = this.$('.app-end').val();
+    this.model.set('end', end);
   },
 
   updateCategory() {
-    console.log('category', this.$('.app-category').val());
+    let category = this.$('.app-category').val();
+    this.model.set('category', category);
   },
 
   updateDescription() {
-    console.log('description', this.$('.app-description').val());
+    let description = this.$('.app-description').val();
+    this.model.set('description', description);
   }
 });

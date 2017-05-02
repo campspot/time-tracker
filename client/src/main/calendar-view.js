@@ -1,21 +1,23 @@
 "use strict";
 
 require('fullcalendar');
-var Marionette = require('backbone.marionette');
-var Radio = require('backbone.radio');
+const $ = require('jquery');
+const Marionette = require('backbone.marionette');
+const Radio = require('backbone.radio');
 
-var PUNCHES = require("../events.js").PUNCHES;
-var Punch = require('../models/punch');
+const PUNCHES = require("../events.js").PUNCHES;
+const Punch = require('../models/punch-model');
 
-var punchChannel = Radio.channel(PUNCHES.channel);
+const punchChannel = Radio.channel(PUNCHES.channel);
 
 module.exports = Marionette.View.extend({
   template: false,
 
-  onRender: function () {
-    var self = this;
+  onRender() {
+    let self = this;
     setTimeout(function () {
       self.$el.fullCalendar({
+        events: self.loadEvents.bind(self),
         header: {
           left: 'prev,next today',
           center: 'title',
@@ -31,12 +33,25 @@ module.exports = Marionette.View.extend({
         slotLabelFormat: 'h(:mm)a',
         selectable: true,
         selectHelper: true,
-        select: self.timeSelected
+        select: self.timeSelected.bind(this)
       });
     });
   },
 
-  timeSelected: function (start, end) {
+  loadEvents(start, end, tz, callback) {
+    return this.collection.fetch({
+      data: $.param({
+        start: start.toISOString(),
+        end: end.toISOString()
+      })
+    }).then(() => {
+      const events = this.collection.models.map((model) => model.toEvent());
+
+      callback(events);
+    });
+  },
+
+  timeSelected(start, end) {
     punchChannel.trigger(PUNCHES.events.NEW_PUNCH, new Punch({start: start, end: end}));
   }
 });

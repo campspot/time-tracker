@@ -1,11 +1,23 @@
 package com.campspot;
 
-import io.dropwizard.Configuration;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.hibernate.validator.constraints.*;
+import io.dropwizard.Configuration;
+import io.dropwizard.db.DataSourceFactory;
 
-import javax.validation.constraints.*;
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 
 public class TimeTrackingConfiguration extends Configuration {
-  // TODO: implement service configuration
+  @Valid
+  @NotNull
+  @JsonProperty("database")
+  private DataSourceFactory database = new DataSourceFactory();
+
+  public void setDataSourceFactory(DataSourceFactory factory) {
+    this.database = factory;
+  }
+
+  public DataSourceFactory getDataSourceFactory() {
+    return database;
+  }
 }
