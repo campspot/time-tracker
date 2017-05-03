@@ -14,10 +14,9 @@ module.exports = Marionette.View.extend({
   template: false,
 
   onRender() {
-    let self = this;
-    setTimeout(function () {
-      self.$el.fullCalendar({
-        events: self.loadEvents.bind(self),
+    $(() => {
+      this.$el.fullCalendar({
+        events: this.loadEvents.bind(this),
         timezone: 'local',
         timeFormat: 'h(:mm) A',
         header: {
@@ -36,8 +35,8 @@ module.exports = Marionette.View.extend({
         slotLabelFormat: 'h(:mm) A',
         selectable: true,
         selectHelper: true,
-        select: self.timeSelected.bind(this),
-        eventOverlap: self.resolveOverlap.bind(this)
+        select: this.timeSelected.bind(this),
+        eventOverlap: this.resolveOverlap.bind(this)
       });
     });
   },
@@ -46,12 +45,13 @@ module.exports = Marionette.View.extend({
     return this.collection.fetch({
       data: $.param({
         start: start.toISOString(),
-        end: end.toISOString()
+        end: end.toISOString(),
+        _: new Date().getTime()
       })
     }).then(() => {
       const events = this.collection.models.map((model) => model.toEvent());
 
-      callback(events);
+      return callback(events);
     });
   },
 

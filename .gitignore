@@ -52,4 +52,5 @@ npm-debug.log
 /target
 dependency-reduced-pom.xml
 /node
+/src/main/resources/assets/app.js
 
