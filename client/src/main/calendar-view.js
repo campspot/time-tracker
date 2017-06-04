@@ -36,7 +36,9 @@ module.exports = Marionette.View.extend({
         selectable: true,
         selectHelper: true,
         select: this.timeSelected.bind(this),
-        eventOverlap: this.resolveOverlap.bind(this)
+        eventOverlap: this.resolveOverlap.bind(this),
+        eventDrop: this.punchEdited.bind(this),
+        eventResize: this.punchEdited.bind(this),
       });
     });
   },
@@ -61,5 +63,18 @@ module.exports = Marionette.View.extend({
 
   resolveOverlap(stillEvent, movingEvent) {
     return !stillEvent.punch;
+  },
+
+  punchEdited(event, delta, revertFunc) {
+    let model = this.collection.find((model) => {
+      return model.get('id') === event.id;
+    });
+
+    model.set('start', event.start);
+    model.set('end', event.end);
+    return model.save()
+      .catch(() => {
+        return revertFunc();
+      });
   }
 });

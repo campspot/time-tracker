@@ -9,30 +9,16 @@ import com.fasterxml.jackson.module.paramnames.ParameterNamesModule;
 import io.dropwizard.Application;
 import io.dropwizard.assets.AssetsBundle;
 import io.dropwizard.db.PooledDataSourceFactory;
-import io.dropwizard.hibernate.ScanningHibernateBundle;
+import io.dropwizard.jdbi.DBIFactory;
 import io.dropwizard.migrations.MigrationsBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
-import org.hibernate.SessionFactory;
-import org.hibernate.cfg.Configuration;
+import org.skife.jdbi.v2.DBI;
 
 public class TimeTrackingApplication extends Application<TimeTrackingConfiguration> {
   private static final AssetsBundle assetsBundle = new AssetsBundle("/assets", "/", "index.html");
 
   private static final MigrationsBundle<TimeTrackingConfiguration> migrationsBundle = new MigrationsBundle<TimeTrackingConfiguration>() {
-    @Override
-    public PooledDataSourceFactory getDataSourceFactory(TimeTrackingConfiguration configuration) {
-      return configuration.getDataSourceFactory();
-    }
-  };
-
-  private static final ScanningHibernateBundle<TimeTrackingConfiguration> hibernateBundle = new ScanningHibernateBundle<TimeTrackingConfiguration>("com.campspot.dao.entities") {
-    @Override
-    protected void configure(Configuration configuration) {
-      configuration.addPackage("com.campspot.dao.entities");
-      super.configure(configuration);
-    }
-
     @Override
     public PooledDataSourceFactory getDataSourceFactory(TimeTrackingConfiguration configuration) {
       return configuration.getDataSourceFactory();
@@ -52,7 +38,6 @@ public class TimeTrackingApplication extends Application<TimeTrackingConfigurati
   public void initialize(final Bootstrap<TimeTrackingConfiguration> bootstrap) {
     bootstrap.addBundle(assetsBundle);
     bootstrap.addBundle(migrationsBundle);
-    bootstrap.addBundle(hibernateBundle);
   }
 
   @Override
@@ -63,8 +48,10 @@ public class TimeTrackingApplication extends Application<TimeTrackingConfigurati
     objectMapper.registerModule(new ParameterNamesModule(JsonCreator.Mode.PROPERTIES));
     objectMapper.configure(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
 
-    SessionFactory sessionFactory = hibernateBundle.getSessionFactory();
-    PunchDAO punchDAO = new PunchDAO(sessionFactory);
+    final DBIFactory factory = new DBIFactory();
+    final DBI jdbi = factory.build(environment, configuration.getDataSourceFactory(), "db");
+
+    PunchDAO punchDAO = jdbi.onDemand(PunchDAO.class);
 
     PunchLib punchLib = new PunchLib(punchDAO);
 

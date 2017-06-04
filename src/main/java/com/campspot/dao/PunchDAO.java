@@ -1,42 +1,27 @@
 package com.campspot.dao;
 
-import com.campspot.dao.entities.PunchModel;
-import io.dropwizard.hibernate.AbstractDAO;
-import org.hibernate.Criteria;
-import org.hibernate.SessionFactory;
-import org.hibernate.criterion.Projections;
-import org.hibernate.criterion.Restrictions;
+import com.campspot.api.Punch;
 import org.joda.time.DateTime;
+import org.skife.jdbi.v2.sqlobject.GetGeneratedKeys;
+import org.skife.jdbi.v2.sqlobject.SqlQuery;
+import org.skife.jdbi.v2.sqlobject.SqlUpdate;
 
 import java.util.List;
 
-public class PunchDAO extends AbstractDAO<PunchModel> {
-  public PunchDAO(SessionFactory sessionFactory) {
-    super(sessionFactory);
-  }
+public interface PunchDAO {
+  @SqlUpdate("INSERT INTO Punch (start, end, category, description) VALUES (:start, :end, :category, :description)")
+  @GetGeneratedKeys
+  Long create(DateTime start, DateTime end, String category, String description);
 
-  public PunchModel create(PunchModel punch) {
-    return persist(punch);
-  }
+  @SqlUpdate("UPDATE Punch SET start = :start, end = :end, category = :category, description = :description WHERE id = :id")
+  void update(Long id, DateTime start, DateTime end, String category, String description);
 
-  public List<PunchModel> listForDates(DateTime start, DateTime end) {
-    Criteria filter = criteria();
+  @SqlQuery("SELECT * FROM Punch WHERE start >= :start and end <= :end")
+  List<Punch> listForDates(DateTime start, DateTime end);
 
-    filter
-      .add(Restrictions.ge("start", start))
-      .add(Restrictions.le("end", end));
+  @SqlQuery("SELECT COUNT(id) > 0 FROM Punch WHERE start >= :start and end <= :end")
+  Boolean anyInRange(DateTime start, DateTime end);
 
-    return list(filter);
-  }
-
-  public Boolean anyInRange(DateTime start, DateTime end) {
-    Criteria filter = criteria();
-
-    filter
-      .add(Restrictions.ge("end", start))
-      .add(Restrictions.le("start", end))
-      .setProjection(Projections.count("id"));
-
-    return (long) filter.uniqueResult() > 0;
-  }
+  @SqlQuery("SELECT * FROM Punch WHERE id = :id")
+  Punch findById(Long id);
 }
