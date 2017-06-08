@@ -3,7 +3,7 @@ package com.campspot.resources
 import com.campspot.api.Punch
 import com.campspot.lib.PunchLib
 import com.codahale.metrics.annotation.Timed
-import io.dropwizard.jersey.params.DateTimeParam
+import io.dropwizard.jersey.jsr310.ZonedDateTimeParam
 import org.hibernate.validator.valuehandling.UnwrapValidatedValue
 import org.skife.jdbi.v2.TransactionIsolationLevel
 import org.skife.jdbi.v2.sqlobject.Transaction
@@ -38,8 +38,8 @@ class PunchResource(private val punchLib: PunchLib) {
   @Valid
   @Transaction(TransactionIsolationLevel.READ_COMMITTED)
   fun list(
-    @NotNull @UnwrapValidatedValue @QueryParam("start") start: DateTimeParam,
-    @NotNull @UnwrapValidatedValue @QueryParam("end") end: DateTimeParam
+    @NotNull @UnwrapValidatedValue @QueryParam("start") start: ZonedDateTimeParam,
+    @NotNull @UnwrapValidatedValue @QueryParam("end") end: ZonedDateTimeParam
   ): List<Punch> {
     return punchLib.listForDates(start.get(), end.get())
   }

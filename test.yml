@@ -2,10 +2,10 @@ server:
   rootPath: /api
   applicationConnectors:
     - type: http
-      port: 6789
+      port: 6889
   adminConnectors:
     - type: http
-      port: 6790
+      port: 6890
 
 logging:
   level: INFO
@@ -16,7 +16,7 @@ logging:
 database:
   driverClass: com.mysql.jdbc.Driver
   user: root
-  url: jdbc:mysql://localhost:3306/time_tracking?characterEncoding=UTF-8&useSSL=false
+  url: jdbc:mysql://localhost:3306/time_tracking_test?characterEncoding=UTF-8&useSSL=false
   properties:
     charSet: UTF-8
     hibernate.dialect: org.hibernate.dialect.MySQL5InnoDBDialect
@@ -34,3 +34,8 @@ database:
   abandonWhenPercentageFull: 0
   logAbandonedConnections: true
   logValidationErrors: true
+
+jerseyClient:
+  timeout: 1m
+  connectionRequestTimeout: 1m
+  cookiesEnabled: true
