@@ -2,6 +2,8 @@ package com.campspot.lib
 
 import com.campspot.api.Punch
 import com.campspot.dao.PunchDAO
+import com.campspot.exceptions.EntityNotFoundException
+import com.campspot.exceptions.PunchCannotOverlapException
 import java.time.ZonedDateTime
 
 class PunchLib(private val punchDAO: PunchDAO) {
@@ -16,7 +18,7 @@ class PunchLib(private val punchDAO: PunchDAO) {
     validatePunchDoesNotOverlap(punch)
 
     if (punch.id == null) {
-      throw RuntimeException("Must have ID to update value")
+      throw EntityNotFoundException("Punch must have ID to update value")
     }
 
     punchDAO.update(punch)
@@ -29,7 +31,7 @@ class PunchLib(private val punchDAO: PunchDAO) {
 
   private fun validatePunchDoesNotOverlap(punch: Punch) {
     if (punchDAO.anyInRange(punch.start, punch.end)) {
-      throw RuntimeException("Punch Cannot Overlap")
+      throw PunchCannotOverlapException()
     }
   }
 }
