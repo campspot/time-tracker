@@ -5,7 +5,6 @@ import com.campspot.client.EntityValidator
 import com.campspot.client.TimeTrackingClient
 import io.dropwizard.client.JerseyClientBuilder
 import io.dropwizard.jdbi.DBIFactory
-import io.dropwizard.jdbi.args.ZonedDateTimeMapper
 import io.dropwizard.testing.junit.DropwizardAppRule
 import liquibase.Liquibase
 import liquibase.database.jvm.JdbcConnection
@@ -18,8 +17,6 @@ import org.skife.jdbi.v2.DBI
 import uy.klutter.db.jdbi.v2.attachKotlinPlugin
 import java.util.*
 import javax.ws.rs.client.Client
-
-
 
 open class IntegrationTest {
   companion object {
