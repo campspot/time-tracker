@@ -3,6 +3,7 @@ package com.campspot.lib
 import com.campspot.any
 import com.campspot.api.Punch
 import com.campspot.dao.PunchDAO
+import com.campspot.dao.TestDAOManager
 import com.campspot.exceptions.EntityNotFoundException
 import com.campspot.exceptions.PunchCannotOverlapException
 import org.assertj.core.api.Assertions.assertThat
@@ -11,9 +12,10 @@ import org.mockito.Mockito.*
 import java.time.ZonedDateTime
 
 class PunchLibTest {
-  val punchDAO = mock(PunchDAO::class.java)
   val mockableObject = mock(MockableObject::class.java)
-  val subject = PunchLib(punchDAO, mockableObject)
+  val daoManager = TestDAOManager()
+  val subject = PunchLib(daoManager, mockableObject)
+  val punchDAO = daoManager[PunchDAO::class]
 
   val start = ZonedDateTime.now()
   val end = ZonedDateTime.now().plusMinutes(30)

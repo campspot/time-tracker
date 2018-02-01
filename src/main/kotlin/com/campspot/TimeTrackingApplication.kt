@@ -3,7 +3,9 @@ package com.campspot
 import com.campspot.dao.PunchDAO
 import com.campspot.lib.MockableObject
 import com.campspot.lib.PunchLib
-import com.campspot.middleware.CharsetResponseFilter
+import com.campspot.middleware.charset.CharsetResponseFilter
+import com.campspot.middleware.transactions.DAOManager
+import com.campspot.middleware.transactions.TransactionApplicationListener
 import com.campspot.resources.PunchResource
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.github.arteam.jdbi3.JdbiFactory
@@ -52,11 +54,14 @@ class TimeTrackingApplication : Application<TimeTrackingConfiguration>() {
     jdbi.installPlugin(KotlinSqlObjectPlugin())
     TimeZone.setDefault(DateTimeZone.UTC.toTimeZone())
 
+    val daoManager = DAOManager(PunchDAO::class)
+    val punchLib = PunchLib(daoManager, MockableObject())
+
+    val transactionApplicationListener = TransactionApplicationListener(daoManager)
+    transactionApplicationListener.registerDbi(TimeTrackingApplication.MASTER, jdbi)
+    environment.jersey().register(transactionApplicationListener)
+
     environment.jersey().register(CharsetResponseFilter())
-
-    val punchDAO = jdbi.onDemand<PunchDAO>(PunchDAO::class.java)
-
-    val punchLib = PunchLib(punchDAO, MockableObject())
 
     environment.jersey().register(PunchResource(punchLib))
   }
@@ -66,5 +71,7 @@ class TimeTrackingApplication : Application<TimeTrackingConfiguration>() {
     @JvmStatic fun main(args: Array<String>) {
       TimeTrackingApplication().run(*args)
     }
+
+    const val MASTER = "master"
   }
 }

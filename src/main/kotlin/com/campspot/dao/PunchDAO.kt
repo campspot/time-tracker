@@ -6,7 +6,7 @@ import org.jdbi.v3.sqlobject.statement.SqlQuery
 import org.jdbi.v3.sqlobject.statement.SqlUpdate
 import java.time.ZonedDateTime
 
-interface PunchDAO {
+interface PunchDAO: DAO {
   @SqlUpdate("INSERT INTO Punch (start, end, category, description) VALUES (:punch.start, :punch.end, :punch.category, :punch.description)")
   @GetGeneratedKeys
   fun create(punch: Punch): Long
