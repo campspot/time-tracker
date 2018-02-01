@@ -36,7 +36,7 @@ class PunchResource(private val punchLib: PunchLib) {
   @GET
   @Timed
   @Valid
-  @Transaction(TransactionIsolationLevel.READ_COMMITTED)
+  @Transaction(TransactionIsolationLevel.READ_COMMITTED, readOnly = true)
   fun list(
     @NotNull @UnwrapValidatedValue @QueryParam("start") start: ZonedDateTimeParam,
     @NotNull @UnwrapValidatedValue @QueryParam("end") end: ZonedDateTimeParam
