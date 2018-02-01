@@ -1,5 +1,6 @@
 package com.campspot.lib
 
+import com.campspot.any
 import com.campspot.api.Punch
 import com.campspot.dao.PunchDAO
 import com.campspot.exceptions.EntityNotFoundException
@@ -85,5 +86,16 @@ class PunchLibTest {
 
     verify(mockableObject, times(1)).doStuff("whoop")
     verify(mockableObject, times(0)).doStuff("Whoop")
+  }
+
+  @Test
+  fun `using mockito's any() method has issues so we made our own`() {
+    val category = "whoop"
+    val description = "described"
+    val punchWithDescription = basicPunch.copy(category = category, description = description)
+
+    `when`(punchDAO.findFirstForCategory(any(String::class))).thenReturn(punchWithDescription)
+
+    assertThat(subject.somethingForTesting(category)).isEqualTo(description)
   }
 }
