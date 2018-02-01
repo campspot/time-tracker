@@ -1,6 +1,7 @@
 package com.campspot
 
 import com.campspot.dao.PunchDAO
+import com.campspot.lib.MockableObject
 import com.campspot.lib.PunchLib
 import com.campspot.middleware.CharsetResponseFilter
 import com.campspot.resources.PunchResource
@@ -57,7 +58,7 @@ class TimeTrackingApplication : Application<TimeTrackingConfiguration>() {
 
     val punchDAO = jdbi.onDemand<PunchDAO>(PunchDAO::class.java)
 
-    val punchLib = PunchLib(punchDAO)
+    val punchLib = PunchLib(punchDAO, MockableObject())
 
     environment.jersey().register(PunchResource(punchLib))
   }

@@ -6,7 +6,10 @@ import com.campspot.exceptions.EntityNotFoundException
 import com.campspot.exceptions.PunchCannotOverlapException
 import java.time.ZonedDateTime
 
-class PunchLib(private val punchDAO: PunchDAO) {
+class PunchLib(
+  private val punchDAO: PunchDAO,
+  private val mockableObject: MockableObject
+) {
   fun create(punch: Punch): Punch {
     validatePunchDoesNotOverlap(punch)
 
@@ -29,9 +32,20 @@ class PunchLib(private val punchDAO: PunchDAO) {
     return punchDAO.findAllInDateRange(start, end)
   }
 
+  fun somethingForTesting(category: String): String {
+    val firstForCategory = punchDAO.findFirstForCategory(category)
+
+    return firstForCategory.description
+  }
+
+  fun anotherThingToTest(): String {
+    return mockableObject.doStuff("whoop")
+  }
+
   private fun validatePunchDoesNotOverlap(punch: Punch) {
     if (punchDAO.anyInRange(punch.start, punch.end)) {
       throw PunchCannotOverlapException()
     }
   }
 }
+

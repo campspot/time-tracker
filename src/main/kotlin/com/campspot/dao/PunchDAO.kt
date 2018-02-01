@@ -22,4 +22,6 @@ interface PunchDAO {
 
   @SqlQuery("SELECT * FROM Punch WHERE id = :id")
   fun findById(id: Long): Punch
+
+  fun findFirstForCategory(category: String): Punch
 }
