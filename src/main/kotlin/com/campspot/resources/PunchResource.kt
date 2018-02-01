@@ -5,8 +5,8 @@ import com.campspot.lib.PunchLib
 import com.codahale.metrics.annotation.Timed
 import io.dropwizard.jersey.jsr310.ZonedDateTimeParam
 import org.hibernate.validator.valuehandling.UnwrapValidatedValue
-import org.skife.jdbi.v2.TransactionIsolationLevel
-import org.skife.jdbi.v2.sqlobject.Transaction
+import org.jdbi.v3.core.transaction.TransactionIsolationLevel
+import org.jdbi.v3.sqlobject.transaction.Transaction
 import javax.validation.Valid
 import javax.validation.constraints.NotNull
 import javax.ws.rs.*

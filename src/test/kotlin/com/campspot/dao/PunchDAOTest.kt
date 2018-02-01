@@ -2,14 +2,14 @@ package com.campspot.dao
 
 import com.campspot.api.Punch
 import org.assertj.core.api.Assertions.assertThat
+import org.jdbi.v3.sqlobject.kotlin.onDemand
 import org.junit.Test
-import uy.klutter.db.jdbi.v2.onDemand
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 
 class PunchDAOTest : DAOTest() {
-  val punchDAO = jdbi!!.onDemand(PunchDAO::class)
+  val punchDAO = jdbi!!.onDemand<PunchDAO>()
 
   @Test
   fun anyInRange_returnsWhetherAnyExistingPunchesExistInRange() {

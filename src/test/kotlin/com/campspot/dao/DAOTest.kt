@@ -1,23 +1,22 @@
 package com.campspot.dao
 
 import com.codahale.metrics.MetricRegistry
+import com.github.arteam.jdbi3.JdbiFactory
 import io.dropwizard.db.DataSourceFactory
 import io.dropwizard.jackson.Jackson
-import io.dropwizard.jdbi.DBIFactory
 import io.dropwizard.setup.Environment
 import liquibase.Liquibase
 import liquibase.database.jvm.JdbcConnection
 import liquibase.resource.ClassLoaderResourceAccessor
-import org.joda.time.DateTimeZone
+import org.jdbi.v3.core.Jdbi
+import org.jdbi.v3.core.kotlin.KotlinPlugin
+import org.jdbi.v3.sqlobject.kotlin.KotlinSqlObjectPlugin
 import org.junit.BeforeClass
-import org.skife.jdbi.v2.DBI
-import uy.klutter.db.jdbi.v2.attachKotlinPlugin
-import java.util.*
 
 
 open class DAOTest {
   companion object {
-    var jdbi: DBI? = null
+    var jdbi: Jdbi? = null
 
     @BeforeClass
     @JvmStatic
@@ -29,14 +28,10 @@ open class DAOTest {
       dataSourceFactory.user = "sa"
       dataSourceFactory.password = ""
 
-      val utc = DateTimeZone.UTC.toTimeZone()
-      val factory = object : DBIFactory() {
-        override fun databaseTimeZone(): Optional<TimeZone> {
-          return Optional.of(utc)
-        }
-      }
+      val factory = JdbiFactory()
       jdbi = factory.build(env, dataSourceFactory, "db")
-      jdbi?.attachKotlinPlugin()
+      jdbi!!.installPlugin(KotlinPlugin())
+      jdbi!!.installPlugin(KotlinSqlObjectPlugin())
 
       val ds = dataSourceFactory.build(env.metrics(), "migrations")
       ds.connection.use({ connection ->

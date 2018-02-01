@@ -2,8 +2,8 @@ package integration
 
 import com.campspot.api.Punch
 import org.assertj.core.api.Assertions.assertThat
+import org.jdbi.v3.core.kotlin.mapTo
 import org.junit.Test
-import uy.klutter.db.jdbi.v2.map
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
@@ -24,7 +24,7 @@ class PunchResourceTest : IntegrationTest() {
     assertThat(createdPunch.id).isNotNull()
 
     val handle = jdbi!!.open()
-    val punches = handle.createQuery("SELECT * FROM Punch").map(Punch::class).list()
+    val punches = handle.createQuery("SELECT * FROM Punch").mapTo<Punch>().list()
 
     assertThat(punches).hasSize(1)
     assertThat(punches[0]).isEqualTo(createdPunch)
@@ -59,7 +59,7 @@ class PunchResourceTest : IntegrationTest() {
     val punchFromDB = handle
       .createQuery("SELECT * FROM Punch WHERE id = :id")
       .bind("id", punch.id)
-      .map(Punch::class)
+      .mapTo<Punch>()
       .first()
 
     assertThat(update).isEqualTo(punchFromDB)

@@ -1,9 +1,9 @@
 package com.campspot.dao
 
 import com.campspot.api.Punch
-import org.skife.jdbi.v2.sqlobject.GetGeneratedKeys
-import org.skife.jdbi.v2.sqlobject.SqlQuery
-import org.skife.jdbi.v2.sqlobject.SqlUpdate
+import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys
+import org.jdbi.v3.sqlobject.statement.SqlQuery
+import org.jdbi.v3.sqlobject.statement.SqlUpdate
 import java.time.ZonedDateTime
 
 interface PunchDAO {
