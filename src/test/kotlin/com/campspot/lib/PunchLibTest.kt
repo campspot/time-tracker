@@ -5,19 +5,21 @@ import com.campspot.api.Punch
 import com.campspot.dao.PunchDAO
 import com.campspot.exceptions.EntityNotFoundException
 import com.campspot.exceptions.PunchCannotOverlapException
+import com.campspot.jdbi3.test.TestDAOManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Test
 import org.mockito.Mockito.*
 import java.time.ZonedDateTime
 
 class PunchLibTest {
-  val punchDAO = mock(PunchDAO::class.java)
   val mockableObject = mock(MockableObject::class.java)
-  val subject = PunchLib(punchDAO, mockableObject)
+  val daoManager = TestDAOManager()
+  val subject = PunchLib(daoManager, mockableObject)
+  val punchDAO = daoManager[PunchDAO::class]
 
   val start = ZonedDateTime.now()
   val end = ZonedDateTime.now().plusMinutes(30)
-  val basicPunch = Punch(start = start, end = end, category = "", description = "")
+  val basicPunch = Punch(start = start, end = end, category = "", description = "", isPaid = true)
 
   @Test(expected = PunchCannotOverlapException::class)
   fun create_ThrowsErrorIfPunchOverlaps() {

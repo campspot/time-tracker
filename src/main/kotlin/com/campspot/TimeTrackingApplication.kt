@@ -1,11 +1,15 @@
 package com.campspot
 
 import com.campspot.dao.PunchDAO
+import com.campspot.jdbi3.DAOManager
+import com.campspot.jdbi3.TransactionApplicationListener
 import com.campspot.lib.MockableObject
 import com.campspot.lib.PunchLib
-import com.campspot.middleware.CharsetResponseFilter
+import com.campspot.middleware.charset.CharsetResponseFilter
 import com.campspot.resources.PunchResource
+import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule
 import com.github.arteam.jdbi3.JdbiFactory
 import io.dropwizard.Application
 import io.dropwizard.assets.AssetsBundle
@@ -43,6 +47,7 @@ class TimeTrackingApplication : Application<TimeTrackingConfiguration>() {
 
     val objectMapper = environment.objectMapper
     objectMapper.registerModule(KotlinModule())
+    objectMapper.registerModule(ParameterNamesModule(JsonCreator.Mode.PROPERTIES))
     objectMapper.configure(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
     objectMapper.setTimeZone(utc)
 
@@ -52,11 +57,14 @@ class TimeTrackingApplication : Application<TimeTrackingConfiguration>() {
     jdbi.installPlugin(KotlinSqlObjectPlugin())
     TimeZone.setDefault(DateTimeZone.UTC.toTimeZone())
 
+    val daoManager = DAOManager(PunchDAO::class)
+    val punchLib = PunchLib(daoManager, MockableObject())
+
+    val transactionApplicationListener = TransactionApplicationListener(daoManager)
+    transactionApplicationListener.registerDbi(TimeTrackingApplication.MASTER, jdbi)
+    environment.jersey().register(transactionApplicationListener)
+
     environment.jersey().register(CharsetResponseFilter())
-
-    val punchDAO = jdbi.onDemand<PunchDAO>(PunchDAO::class.java)
-
-    val punchLib = PunchLib(punchDAO, MockableObject())
 
     environment.jersey().register(PunchResource(punchLib))
   }
@@ -66,5 +74,7 @@ class TimeTrackingApplication : Application<TimeTrackingConfiguration>() {
     @JvmStatic fun main(args: Array<String>) {
       TimeTrackingApplication().run(*args)
     }
+
+    const val MASTER = "master"
   }
 }

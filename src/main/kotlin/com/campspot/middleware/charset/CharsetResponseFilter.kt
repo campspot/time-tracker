@@ -1,4 +1,4 @@
-package com.campspot.middleware
+package com.campspot.middleware.charset
 
 import javax.ws.rs.container.ContainerRequestContext
 import javax.ws.rs.container.ContainerResponseContext

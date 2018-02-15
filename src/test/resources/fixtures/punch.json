@@ -2,5 +2,6 @@
   "start": "2016-10-05T06:45:00Z",
   "end": "2016-10-05T07:30:00Z",
   "category": "Activities",
-  "description": "Party rocking"
+  "description": "Party rocking",
+  "isPaid": true
 }
