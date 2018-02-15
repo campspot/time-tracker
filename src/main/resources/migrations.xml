@@ -28,4 +28,10 @@
       <column name="end"/>
     </createIndex>
   </changeSet>
+
+  <changeSet id="2" author="Al Scott">
+    <addColumn tableName="Punch">
+      <column name="isPaid" type="boolean"/>
+    </addColumn>
+  </changeSet>
 </databaseChangeLog>

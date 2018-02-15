@@ -17,7 +17,7 @@ class PunchResourceTest : IntegrationTest() {
       .withHour(11)
       .withMinute(15)
     val end = start.withMinute(45)
-    val punch = Punch(start = start, end = end, category = "Stuff", description = "Very important, pay me extra")
+    val punch = Punch(start = start, end = end, category = "Stuff", description = "Very important, pay me extra", isPaid = true)
 
     val createdPunch = apiClient!!.createPunch(punch).get()
 
@@ -41,7 +41,7 @@ class PunchResourceTest : IntegrationTest() {
     val end = start.withMinute(45)
     val category = "Stuff"
     val description = "Very important, pay me extra"
-    val punch = Punch(id = id, start = start, end = end, category = category, description = description)
+    val punch = Punch(id = id, start = start, end = end, category = category, description = description, isPaid = false)
 
     val handle = jdbi!!.open()
     handle.execute("INSERT INTO PUNCH (id, start, end, category, description) VALUES (?, ?, ?, ?, ?)", id, start, end, category, description)
@@ -72,7 +72,7 @@ class PunchResourceTest : IntegrationTest() {
       .plusDays(5)
     val rangeEnd = rangeStart.plusDays(5)
 
-    val basePunch = Punch(id = 0, start = rangeStart, end = rangeEnd, category = "", description = "")
+    val basePunch = Punch(id = 0, start = rangeStart, end = rangeEnd, category = "", description = "", isPaid = true)
 
     val beforeStartNoOverlap = basePunch.copy(id = 1, start = rangeStart.minusDays(5), end = rangeStart.minusDays(3))
     val beforeStartTillExactlyStart = basePunch.copy(id = 2, start = rangeStart.minusDays(5), end = rangeStart)

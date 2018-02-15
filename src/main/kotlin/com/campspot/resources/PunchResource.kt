@@ -2,8 +2,8 @@ package com.campspot.resources
 
 import com.campspot.TimeTrackingApplication.Companion.MASTER
 import com.campspot.api.Punch
+import com.campspot.jdbi3.InTransaction
 import com.campspot.lib.PunchLib
-import com.campspot.middleware.transactions.InTransaction
 import com.codahale.metrics.annotation.Timed
 import io.dropwizard.jersey.jsr310.ZonedDateTimeParam
 import org.hibernate.validator.valuehandling.UnwrapValidatedValue

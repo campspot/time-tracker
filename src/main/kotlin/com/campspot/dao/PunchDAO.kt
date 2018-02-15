@@ -1,6 +1,7 @@
 package com.campspot.dao
 
 import com.campspot.api.Punch
+import com.campspot.jdbi3.DAO
 import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys
 import org.jdbi.v3.sqlobject.statement.SqlQuery
 import org.jdbi.v3.sqlobject.statement.SqlUpdate

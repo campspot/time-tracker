@@ -4,7 +4,7 @@ import com.campspot.api.Punch
 import com.campspot.dao.PunchDAO
 import com.campspot.exceptions.EntityNotFoundException
 import com.campspot.exceptions.PunchCannotOverlapException
-import com.campspot.middleware.transactions.DAOManager
+import com.campspot.jdbi3.DAOManager
 import java.time.ZonedDateTime
 
 class PunchLib(

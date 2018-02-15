@@ -1,13 +1,15 @@
 package com.campspot
 
 import com.campspot.dao.PunchDAO
+import com.campspot.jdbi3.DAOManager
+import com.campspot.jdbi3.TransactionApplicationListener
 import com.campspot.lib.MockableObject
 import com.campspot.lib.PunchLib
 import com.campspot.middleware.charset.CharsetResponseFilter
-import com.campspot.middleware.transactions.DAOManager
-import com.campspot.middleware.transactions.TransactionApplicationListener
 import com.campspot.resources.PunchResource
+import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.fasterxml.jackson.module.paramnames.ParameterNamesModule
 import com.github.arteam.jdbi3.JdbiFactory
 import io.dropwizard.Application
 import io.dropwizard.assets.AssetsBundle
@@ -45,6 +47,7 @@ class TimeTrackingApplication : Application<TimeTrackingConfiguration>() {
 
     val objectMapper = environment.objectMapper
     objectMapper.registerModule(KotlinModule())
+    objectMapper.registerModule(ParameterNamesModule(JsonCreator.Mode.PROPERTIES))
     objectMapper.configure(com.fasterxml.jackson.databind.SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
     objectMapper.setTimeZone(utc)
 

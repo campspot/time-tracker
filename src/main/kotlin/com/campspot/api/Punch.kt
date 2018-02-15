@@ -7,5 +7,6 @@ data class Punch(
   val start: ZonedDateTime,
   val end: ZonedDateTime,
   val category: String,
-  val description: String
+  val description: String,
+  var isPaid: Boolean
 )

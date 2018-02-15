@@ -18,7 +18,7 @@ class PunchDAOTest : DAOTest() {
       .plusDays(5)
       .withHour(11)
     val end = start.plusMinutes(30)
-    val punch = Punch(start = start, end = end, category = "", description = "")
+    val punch = Punch(start = start, end = end, category = "", description = "", isPaid = true)
 
     punchDAO.create(punch)
 
